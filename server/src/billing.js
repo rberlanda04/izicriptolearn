@@ -1,0 +1,38 @@
+/**
+ * Cobrança via Stripe — o padrão de mercado para assinatura recorrente.
+ *
+ * Fica completamente inerte (endpoints respondem com erro claro, nunca com sucesso
+ * fingido) enquanto STRIPE_SECRET_KEY não estiver configurada. Isso é proposital:
+ * a plataforma nunca deve fingir que processou um pagamento que não processou.
+ * Ativar cobrança real é sempre uma decisão explícita e local (editar .env), nunca
+ * um efeito colateral de código.
+ */
+const isConfigured = Boolean(process.env.STRIPE_SECRET_KEY);
+const stripe = isConfigured ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+
+function isBillingConfigured() {
+    return isConfigured;
+}
+
+async function createCheckoutSession(user) {
+    if (!stripe) throw new Error('Stripe não configurado neste ambiente (defina STRIPE_SECRET_KEY no .env do servidor).');
+    if (!process.env.STRIPE_PRICE_ID_PRO) throw new Error('STRIPE_PRICE_ID_PRO não configurado — crie um preço recorrente no dashboard da Stripe e cole o ID aqui.');
+
+    const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        line_items: [{ price: process.env.STRIPE_PRICE_ID_PRO, quantity: 1 }],
+        customer_email: user.email,
+        client_reference_id: user.id,
+        success_url: `${process.env.CLIENT_URL}/conta?checkout=sucesso`,
+        cancel_url: `${process.env.CLIENT_URL}/precos?checkout=cancelado`,
+    });
+    return session;
+}
+
+function constructWebhookEvent(rawBody, signature) {
+    if (!stripe) throw new Error('Stripe não configurado.');
+    if (!process.env.STRIPE_WEBHOOK_SECRET) throw new Error('STRIPE_WEBHOOK_SECRET não configurado.');
+    return stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
+}
+
+module.exports = { isBillingConfigured, createCheckoutSession, constructWebhookEvent };

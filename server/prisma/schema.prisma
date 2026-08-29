@@ -1,0 +1,68 @@
+// Banco de dados da plataforma iziCripto.
+// SQLite em dev/MVP (zero configuração, arquivo único) — trocar "provider" para
+// "postgresql" e apontar DATABASE_URL para um Postgres real é o único passo necessário
+// para migrar para produção (ver plano de escalabilidade, seção 12).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String?
+  role         String     @default("student") // "student" | "admin"
+  plan         String     @default("free")    // "free" | "pro"
+  createdAt    DateTime   @default(now())
+  progress     Progress[]
+}
+
+model Course {
+  id        String   @id
+  title     String
+  summary   String
+  level     String
+  category  String
+  isPro     Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  modules   Module[]
+}
+
+model Module {
+  id       String   @id @default(cuid())
+  title    String
+  order    Int      @default(0)
+  courseId String
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+}
+
+model Lesson {
+  id          String     @id @default(cuid())
+  title       String
+  content     String
+  durationMin Int        @default(5)
+  order       Int        @default(0)
+  moduleId    String
+  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress    Progress[]
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+}

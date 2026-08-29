@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0E141B;
+  --color-panel: #171D26;
+  --color-panel-2: #202A38;
+  --color-paper: #F2F5FB;
+  --color-card: #FFFFFF;
+  --color-border-soft: #DCE3F0;
+  --color-text-strong: #10161F;
+  --color-text: #384252;
+  --color-muted: #67728A;
+  --color-on-dark-strong: #F5F8FF;
+  --color-on-dark: #C7D0E2;
+  --color-on-dark-muted: #8A93AC;
+  --color-accent: #5B8DFF;
+  --color-accent-deep: #2954C8;
+  --color-signal: #E8973A;
+  --color-signal-soft: #3A2A15;
+  --color-good: #2FAE6E;
+
+  --font-display: 'Montserrat', 'Segoe UI', sans-serif;
+  --font-body: 'Varela Round', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--color-paper);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+/* Em @layer base para que classes utilitárias do Tailwind (ex: text-on-dark-strong)
+   consigam sobrescrever a cor padrão — CSS solto fora de layer sempre venceria a
+   cascata do Tailwind, independente de especificidade. */
+@layer base {
+  h1, h2, h3, h4 { font-family: var(--font-display); color: var(--color-text-strong); margin: 0; }
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #d7dbe3; border-radius: 8px; }
+
+.lesson-content p { margin-bottom: 1.1em; line-height: 1.75; }
+.lesson-content p:last-child { margin-bottom: 0; }
