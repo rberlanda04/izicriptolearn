@@ -49,6 +49,9 @@ export const api = {
   markComplete: (lessonId) => req(`/progress/${lessonId}`, { method: 'POST' }),
   markIncomplete: (lessonId) => req(`/progress/${lessonId}`, { method: 'DELETE' }),
 
+  // Jornada (progresso agregado, próxima aula, sequência de dias)
+  getJourney: () => req('/journey'),
+
   // Billing
   billingStatus: () => req('/billing/status'),
   checkout: () => req('/billing/checkout', { method: 'POST' }),

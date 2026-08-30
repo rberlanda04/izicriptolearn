@@ -28,6 +28,7 @@ async function seed() {
                                 content: lesson.content,
                                 durationMin: lesson.durationMin,
                                 diagramKey: lesson.diagramKey || null,
+                                quiz: lesson.quiz || null,
                                 order: li,
                             })),
                         },
@@ -45,6 +46,30 @@ async function seed() {
         });
     }
     console.log(`Seed aplicado: ${courses.length} cursos no banco de dados.`);
+
+    // O "update" do upsert acima só toca campos do curso em si (título, categoria etc.) —
+    // nunca módulos/aulas, pra nunca arriscar apagar progresso de usuários. Isso significa
+    // que uma aula já existente cujo conteúdo/diagrama/quiz mudou aqui em seedData.js não
+    // seria atualizada no banco sozinha. Este passo casa por (courseId, título da aula) e
+    // sincroniza esses campos — sem nunca criar, apagar ou reordenar aulas.
+    let lessonsSynced = 0;
+    for (const course of courses) {
+        for (const mod of course.modules) {
+            for (const lesson of mod.lessons) {
+                const result = await prisma.lesson.updateMany({
+                    where: { title: lesson.title, module: { courseId: course.id } },
+                    data: {
+                        content: lesson.content,
+                        durationMin: lesson.durationMin,
+                        diagramKey: lesson.diagramKey || null,
+                        quiz: lesson.quiz || null,
+                    },
+                });
+                lessonsSynced += result.count;
+            }
+        }
+    }
+    console.log(`${lessonsSynced} aulas sincronizadas (conteúdo/diagrama/quiz).`);
 
     // Senha do admin de seed: SEMPRE via variável de ambiente, nunca hardcoded no
     // código-fonte (este arquivo é público no repositório). Sem ADMIN_SEED_PASSWORD

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Wallet, TrendingUp, TrendingDown, Percent, Trophy, ListChecks, ShieldAlert, Radio, AlertTriangle } from 'lucide-react';
+import { api } from '../api.js';
 import { StatCard } from '../simulator/components/StatCard.jsx';
 import { PriceChart } from '../simulator/components/PriceChart.jsx';
 import { EquityChart } from '../simulator/components/EquityChart.jsx';
@@ -17,9 +18,21 @@ import { cn } from '../lib/utils.js';
 export function SimuladorPage() {
   const [tab, setTab] = useState('dashboard');
   const [activeSymbol, setActiveSymbol] = useState(null);
+  const [indicatorsLessonHref, setIndicatorsLessonHref] = useState(null);
   const {
     connected, stats, trades, logs, analysisBySymbol, historyBySymbol, aiInsights, aiEnabled, config,
   } = useSimulatorSocket();
+
+  // Resolve o id real (gerado pelo banco) da aula que explica os indicadores, pra linkar
+  // a partir dos badges do gráfico — não dá pra hardcodar o id, só o título é estável aqui.
+  useEffect(() => {
+    api.getCourse('trading-e-gestao-de-risco').then((course) => {
+      for (const mod of course.modules) {
+        const lesson = mod.lessons.find((l) => l.title.startsWith('Indicadores básicos sem misticismo'));
+        if (lesson) { setIndicatorsLessonHref(`/cursos/${course.id}/aulas/${lesson.id}`); break; }
+      }
+    }).catch(() => {});
+  }, []);
 
   const symbols = config?.symbols || [];
   const symbol = activeSymbol || symbols[0];
@@ -102,6 +115,7 @@ export function SimuladorPage() {
                   onSelect={setActiveSymbol}
                   history={historyBySymbol[symbol]}
                   analysis={analysisBySymbol[symbol]}
+                  indicatorsLessonHref={indicatorsLessonHref}
                 />
                 <div className="flex flex-col gap-5">
                   <PositionsTable positions={stats?.openPositions} />

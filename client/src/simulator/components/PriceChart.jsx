@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { LineChart as LineChartIcon, TrendingUp, TrendingDown } from 'lucide-react';
+import { LineChart as LineChartIcon, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, Badge } from '../../components/ui/card.jsx';
 import { cn } from '../../lib/utils.js';
 import { simCard, simTitle, simMuted } from '../theme.js';
@@ -8,7 +9,7 @@ function formatTime(ts) {
   return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function PriceChart({ symbols, activeSymbol, onSelect, history, analysis }) {
+export function PriceChart({ symbols, activeSymbol, onSelect, history, analysis, indicatorsLessonHref }) {
   const data = (history || []).map((p) => ({ ...p, label: formatTime(p.time) }));
   const a = analysis;
   const trendingUp = data.length > 1 && data[data.length - 1].price >= data[0].price;
@@ -69,6 +70,14 @@ export function PriceChart({ symbols, activeSymbol, onSelect, history, analysis 
               EMA200
             </Badge>
             <Badge tone="dark">MTF {a.mtfTrend ?? '—'}</Badge>
+            {indicatorsLessonHref && (
+              <Link
+                to={indicatorsLessonHref}
+                className="text-[11px] font-semibold text-accent hover:text-accent/80 inline-flex items-center gap-0.5 ml-1"
+              >
+                O que significam esses sinais? <ArrowUpRight size={11} />
+              </Link>
+            )}
           </div>
         )}
       </CardContent>

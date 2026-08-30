@@ -9,7 +9,6 @@
     "start": "prisma db push --skip-generate --accept-data-loss && node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seedPrisma.js",
-    "apply-diagrams": "node src/applyDiagrams.js",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio"
   },

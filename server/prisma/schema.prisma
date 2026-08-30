@@ -54,6 +54,10 @@ model Lesson {
   // Chave de um diagrama ilustrativo (ver client/src/diagrams/index.jsx) exibido
   // logo após o título da aula. Null = aula sem diagrama.
   diagramKey  String?
+  // Uma pergunta de fixação opcional exibida ao final da aula: { question, options: string[],
+  // correct: number, explanation }. Null = aula sem quiz. Nunca bloqueia a conclusão da aula —
+  // é reforço, não gate.
+  quiz        Json?
   moduleId    String
   module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress    Progress[]

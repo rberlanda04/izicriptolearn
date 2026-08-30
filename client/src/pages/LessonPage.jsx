@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { cn } from '../lib/utils.js';
 import { LessonDiagram } from '../diagrams/index.jsx';
+import { LessonQuiz } from '../components/LessonQuiz.jsx';
 
 export function LessonPage() {
   const { courseId, lessonId } = useParams();
@@ -112,6 +113,8 @@ export function LessonPage() {
         <div className="lesson-content mt-8 text-[15.5px] text-text">
           {lesson.content?.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
         </div>
+
+        <LessonQuiz quiz={lesson.quiz} key={lesson.id} />
 
         {lesson.id === 'les-tr-0-1' && (
           <Link

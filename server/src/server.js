@@ -252,6 +252,58 @@ app.delete('/api/progress/:lessonId', authenticate, wrap(async (req, res) => {
     res.status(204).end();
 }));
 
+// ---------- Jornada (progresso agregado + próxima aula + sequência de dias) ----------
+// Alimenta o painel "Sua Jornada" da home logada: uma visão única que conecta cursos e
+// simulador, em vez de o usuário ter que descobrir sozinho onde parou ou o que fazer a seguir.
+
+app.get('/api/journey', authenticate, wrap(async (req, res) => {
+    const userId = req.user.sub;
+    const [progressRows, courses] = await Promise.all([
+        prisma.progress.findMany({ where: { userId } }),
+        prisma.course.findMany({
+            orderBy: { order: 'asc' },
+            include: { modules: { orderBy: { order: 'asc' }, include: { lessons: { orderBy: { order: 'asc' } } } } },
+        }),
+    ]);
+
+    const completedIds = new Set(progressRows.map((r) => r.lessonId));
+    const totalLessons = courses.reduce((s, c) => s + c.modules.reduce((s2, m) => s2 + m.lessons.length, 0), 0);
+
+    // Sequência (streak): dias de calendário (UTC) consecutivos, terminando hoje ou ontem,
+    // com pelo menos uma aula concluída em cada um.
+    const daysWithActivity = new Set(progressRows.map((r) => r.completedAt.toISOString().slice(0, 10)));
+    let streakDays = 0;
+    const cursor = new Date();
+    if (!daysWithActivity.has(cursor.toISOString().slice(0, 10))) cursor.setUTCDate(cursor.getUTCDate() - 1);
+    while (daysWithActivity.has(cursor.toISOString().slice(0, 10))) {
+        streakDays++;
+        cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+
+    let nextLesson = null;
+    const courseProgress = [];
+    for (const course of courses) {
+        const lessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
+        const completed = lessonIds.filter((id) => completedIds.has(id)).length;
+        courseProgress.push({ id: course.id, title: course.title, isPro: course.isPro, completed, total: lessonIds.length });
+
+        if (nextLesson || !isUnlocked(course, req.user)) continue;
+        for (const mod of course.modules) {
+            const lesson = mod.lessons.find((l) => !completedIds.has(l.id));
+            if (lesson) { nextLesson = { courseId: course.id, courseTitle: course.title, lessonId: lesson.id, lessonTitle: lesson.title }; break; }
+        }
+    }
+
+    res.json({
+        streakDays,
+        totalCompleted: completedIds.size,
+        totalLessons,
+        xp: completedIds.size * 10,
+        nextLesson,
+        courseProgress,
+    });
+}));
+
 // ---------- Billing ----------
 
 app.get('/api/billing/status', (req, res) => {
