@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Lock, LineChart } from 'lucide-react';
 import { Card, Badge } from '../components/ui/card.jsx';
+import { CourseCardSkeleton } from '../components/ui/Skeleton.jsx';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { cn } from '../lib/utils.js';
@@ -33,7 +34,7 @@ export function CatalogPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-14">
       <h1 className="text-3xl font-bold">Sua trilha de aprendizado</h1>
-      <p className="text-muted mt-2">{courses.length} cursos conectados, do básico ao avançado — mais o simulador de trade pra praticar no caminho.</p>
+      <p className="text-muted mt-2">{courses.length || 6} cursos conectados, do básico ao avançado — mais o simulador de trade pra praticar no caminho.</p>
 
       <div className="flex gap-2 mt-6">
         {['todos', 'iniciante', 'intermediario', 'avancado'].map((l) => (
@@ -42,7 +43,7 @@ export function CatalogPage() {
             onClick={() => setLevel(l)}
             className={cn(
               'px-4 py-1.5 rounded-full text-sm font-medium border transition-colors',
-              level === l ? 'bg-accent text-ink border-accent' : 'border-border-soft text-muted hover:border-accent'
+              level === l ? 'bg-accent text-ink border-accent font-semibold' : 'border-border-soft text-muted hover:border-accent'
             )}
           >
             {l === 'todos' ? 'Todos' : LEVEL_LABEL[l]}
@@ -51,7 +52,11 @@ export function CatalogPage() {
       </div>
 
       {loading ? (
-        <p className="text-muted mt-10">Carregando trilha...</p>
+        <div className="space-y-4 mt-12">
+          <CourseCardSkeleton />
+          <CourseCardSkeleton />
+          <CourseCardSkeleton />
+        </div>
       ) : (
         <div className="relative mt-12 pl-4">
           <div className="absolute left-[23px] top-2 bottom-2 w-0.5 bg-border-soft" aria-hidden="true" />

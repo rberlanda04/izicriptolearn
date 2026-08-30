@@ -6,6 +6,7 @@ import { simulatorApi } from '../simulator/api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { Card, Badge } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
+import { Skeleton } from '../components/ui/Skeleton.jsx';
 import { CourseCover } from '../components/CourseCover.jsx';
 import { cn } from '../lib/utils.js';
 
@@ -47,7 +48,7 @@ function JourneyDashboard({ user }) {
       </div>
 
       <div className="grid md:grid-cols-[1.3fr_1fr] gap-5 mb-10">
-        <Card className="p-6 flex flex-col justify-between">
+        <Card className="p-6 flex flex-col justify-between min-h-[220px]">
           <div>
             <span className="font-[var(--font-mono)] text-xs uppercase tracking-widest text-accent-deep">Continue de onde parou</span>
             {journey?.nextLesson ? (
@@ -61,7 +62,10 @@ function JourneyDashboard({ user }) {
                 <p className="text-sm text-muted mt-1">Dá uma olhada nos cursos Pro pra ir mais fundo, ou pratique no simulador.</p>
               </>
             ) : (
-              <p className="text-sm text-muted mt-3">Carregando...</p>
+              <div className="space-y-2.5 mt-3">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
             )}
           </div>
           {journey?.nextLesson && (
@@ -76,7 +80,7 @@ function JourneyDashboard({ user }) {
           )}
         </Card>
 
-        <Card className="p-6 bg-ink text-on-dark border-none flex flex-col justify-between">
+        <Card className="p-6 bg-ink text-on-dark border-none flex flex-col justify-between min-h-[220px]">
           <div>
             <div className="flex items-center gap-2 text-accent">
               <LineChart size={16} /> <span className="font-[var(--font-mono)] text-xs uppercase tracking-widest">Simulador ao vivo</span>
@@ -95,7 +99,10 @@ function JourneyDashboard({ user }) {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-on-dark-muted mt-3">Carregando...</p>
+              <div className="flex gap-4 mt-3">
+                <Skeleton className="h-10 w-24 bg-panel-2" />
+                <Skeleton className="h-10 w-24 bg-panel-2" />
+              </div>
             )}
             <p className="text-xs text-on-dark-muted mt-3">Dinheiro fictício, mercado real — veja a mesma estratégia do curso de Trading rodando agora.</p>
           </div>

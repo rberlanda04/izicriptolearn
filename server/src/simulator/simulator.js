@@ -10,12 +10,15 @@ const { AiAnalyst } = require('./aiAnalyst');
  * config.js: não existem campos de credencial nem modo "live" em lugar nenhum do código).
  */
 class Simulator extends EventEmitter {
-    constructor(config) {
+    // deps permite injetar um MarketData/AiAnalyst compartilhados entre várias instâncias
+    // (uma por usuário, ver sessionManager.js) — sem isso, cada sessão bateria na OKX
+    // separadamente em vez de aproveitar o cache já existente do MarketData.
+    constructor(config, deps = {}) {
         super();
         this.config = config;
         this.engine = new TradingEngine(config);
-        this.market = new MarketData(config);
-        this.aiAnalyst = new AiAnalyst(config, (msg) => this.engine.log(msg));
+        this.market = deps.market || new MarketData(config);
+        this.aiAnalyst = deps.aiAnalyst || new AiAnalyst(config, (msg) => this.engine.log(msg));
         this.lastAnalysisBySymbol = {};
         this.running = false;
         this.timer = null;
@@ -105,6 +108,13 @@ class Simulator extends EventEmitter {
         this.loop();
     }
 
+    // Usado pelo sessionManager pra descartar sessões inativas sem deixar o setTimeout do
+    // loop rodando pra sempre em segundo plano.
+    stop() {
+        this.running = false;
+        if (this.timer) clearTimeout(this.timer);
+    }
+
     async loop() {
         if (!this.running) return;
         try {
@@ -132,6 +142,30 @@ class Simulator extends EventEmitter {
         const now = Date.now();
         const allowEntry = this.config.symbols.includes(symbol);
         this.engine.processTick(symbol, primaryCandles, confirmCandles, now, allowEntry);
+    }
+
+    openManualPosition(params) {
+        return this.engine.openManualPosition(params);
+    }
+
+    closePositionManual(symbol, reason) {
+        return this.engine.closePositionManual(symbol, reason);
+    }
+
+    closeAllPositionsManual(reason) {
+        return this.engine.closeAllPositionsManual(reason);
+    }
+
+    updateStopsManual(symbol, stops) {
+        return this.engine.updateStopsManual(symbol, stops);
+    }
+
+    resetAccount(initialCapital) {
+        return this.engine.resetAccount(initialCapital);
+    }
+
+    toggleBotAuto(enabled) {
+        return this.engine.toggleBotAuto(enabled);
     }
 
     getSnapshot() {

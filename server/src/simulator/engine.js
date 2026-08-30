@@ -33,6 +33,8 @@ class TradingEngine extends EventEmitter {
         this.cooldowns = {}; // symbol -> timestamp until which entries are blocked
         this.circuitBreakerTripped = false;
         this.lastOptimizedAt = 0;
+        this.botAutoEnabled = true; // Permite alternar entre bot autônomo e modo manual
+        this.lastPriceBySymbol = {}; // Último preço conhecido por par
 
         // Acumuladores incrementais (O(1) por trade fechado, em vez de re-escanear o
         // histórico inteiro a cada tick — getStats() era chamado em todo ciclo de todo símbolo).
@@ -396,19 +398,180 @@ class TradingEngine extends EventEmitter {
         }
     }
 
+    // ---------- Operações Manuais e Gestão Ativa ----------
+
+    getFreeBalance() {
+        let openExposure = 0;
+        for (const p of Object.values(this.positions)) {
+            openExposure += (p.margin || (p.entryPrice * p.quantity));
+        }
+        return Math.max(0, this.balance - openExposure);
+    }
+
+    openManualPosition({ symbol, side, amountUsd, leverage = 1, takeProfit = null, stopLoss = null, isTrailingStop = false, orderType = 'MARKET', limitPrice = null }) {
+        if (!symbol) throw new Error('Símbolo obrigatório.');
+        if (!['BUY', 'SELL'].includes(side)) throw new Error('Lado inválido (deve ser BUY ou SELL).');
+
+        const lev = Math.max(1, Math.min(20, Number(leverage) || 1));
+        const margin = Number(amountUsd);
+        if (Number.isNaN(margin) || margin <= 0) throw new Error('Valor da margem inválido.');
+
+        const free = this.getFreeBalance();
+        if (margin > free) {
+            throw new Error(`Margem solicitada ($${margin.toFixed(2)}) excede o saldo livre ($${free.toFixed(2)}).`);
+        }
+
+        const currentPrice = this.lastPriceBySymbol[symbol] || (orderType === 'LIMIT' ? Number(limitPrice) : null);
+        if (!currentPrice || currentPrice <= 0) {
+            throw new Error(`Preço de mercado para ${symbol} ainda não carregado.`);
+        }
+
+        const entryPrice = orderType === 'LIMIT' && limitPrice ? Number(limitPrice) : currentPrice;
+        const totalNotional = margin * lev;
+        const quantity = totalNotional / entryPrice;
+
+        // Preço de liquidação estimado para posições alavancadas
+        let liquidationPrice = null;
+        if (lev > 1) {
+            const maintenanceMargin = 0.005; // 0.5%
+            liquidationPrice = side === 'BUY'
+                ? entryPrice * (1 - (1 / lev) + maintenanceMargin)
+                : entryPrice * (1 + (1 / lev) - maintenanceMargin);
+        }
+
+        // Se TP/SL não foram informados, calcula defaults razoáveis
+        const defaultAtr = entryPrice * 0.015; // 1.5%
+        let tp = takeProfit ? Number(takeProfit) : (side === 'BUY' ? entryPrice + defaultAtr * 2 : entryPrice - defaultAtr * 2);
+        let sl = stopLoss ? Number(stopLoss) : (side === 'BUY' ? entryPrice - defaultAtr : entryPrice + defaultAtr);
+
+        const now = Date.now();
+        const position = {
+            symbol,
+            side,
+            entryPrice,
+            quantity,
+            margin,
+            leverage: lev,
+            liquidationPrice,
+            takeProfit: tp,
+            stopLoss: sl,
+            initialStopLoss: sl,
+            isTrailingStop: Boolean(isTrailingStop),
+            isManual: true,
+            orderType,
+            entryTime: now,
+            highestPrice: entryPrice,
+            lowestPrice: entryPrice,
+            score: 6,
+            reasons: ['Ordem manual do usuário']
+        };
+
+        this.positions[symbol] = position;
+        this.emit('trade_opened', { ...position });
+        this.log(`[MANUAL] Ordem ${side} ${lev}x em ${symbol} aberta @ $${entryPrice.toFixed(2)} (Margem: $${margin.toFixed(2)})`);
+        this.emit('stats', this.getStats());
+        return position;
+    }
+
+    closePositionManual(symbol, reason = 'MANUAL_CLOSE') {
+        const position = this.positions[symbol];
+        if (!position) throw new Error(`Nenhuma posição aberta encontrada para ${symbol}.`);
+
+        const currentPrice = this.lastPriceBySymbol[symbol] || position.entryPrice;
+        const now = Date.now();
+        return this.closePosition(symbol, currentPrice, now, reason);
+    }
+
+    closeAllPositionsManual(reason = 'MANUAL_CLOSE_ALL') {
+        const symbols = Object.keys(this.positions);
+        const closed = [];
+        const now = Date.now();
+        for (const sym of symbols) {
+            const currentPrice = this.lastPriceBySymbol[sym] || this.positions[sym].entryPrice;
+            const trade = this.closePosition(sym, currentPrice, now, reason);
+            if (trade) closed.push(trade);
+        }
+        return closed;
+    }
+
+    updateStopsManual(symbol, { takeProfit, stopLoss, isTrailingStop }) {
+        const position = this.positions[symbol];
+        if (!position) throw new Error(`Posição ${symbol} não encontrada.`);
+
+        if (takeProfit !== undefined && takeProfit !== null && !Number.isNaN(Number(takeProfit))) {
+            position.takeProfit = Number(takeProfit);
+        }
+        if (stopLoss !== undefined && stopLoss !== null && !Number.isNaN(Number(stopLoss))) {
+            position.stopLoss = Number(stopLoss);
+        }
+        if (isTrailingStop !== undefined) {
+            position.isTrailingStop = Boolean(isTrailingStop);
+        }
+
+        this.log(`[MANUAL] Stops atualizados para ${symbol}: TP $${position.takeProfit.toFixed(2)} | SL $${position.stopLoss.toFixed(2)}`);
+        this.emit('stats', this.getStats());
+        return position;
+    }
+
+    resetAccount(initialCapital = 10000) {
+        this.positions = {};
+        this.trades = [];
+        this.balance = Number(initialCapital) || 10000;
+        this.config.capital = this.balance;
+        this.dayStartBalance = this.balance;
+        this.peakBalance = this.balance;
+        this.maxDrawdownPercent = 0;
+        this.tradeCount = 0;
+        this.wins = 0;
+        this.losses = 0;
+        this.cumPnl = 0;
+        this.cumCosts = 0;
+        this.cumGrossWins = 0;
+        this.cumGrossLosses = 0;
+        this.cumDurationMinutes = 0;
+        this.perSymbolStats = {};
+        this.circuitBreakerTripped = false;
+
+        this.log(`[CONTA] Carteira do simulador resetada para $${this.balance.toFixed(2)}.`);
+        this.emit('stats', this.getStats());
+        return { ok: true, balance: this.balance };
+    }
+
+    toggleBotAuto(enabled) {
+        this.botAutoEnabled = enabled !== undefined ? Boolean(enabled) : !this.botAutoEnabled;
+        this.log(`[BOT] Estratégia automática ${this.botAutoEnabled ? 'ATIVADA' : 'PAUSADA'}.`);
+        this.emit('stats', this.getStats());
+        return { botAutoEnabled: this.botAutoEnabled };
+    }
+
     // ---------- Processamento de um tick de mercado ----------
 
     processTick(symbol, candles, confirmCandlesBySymbolTf, now = Date.now(), allowEntry = true) {
         this.rolloverDayIfNeeded(now);
         const analysis = this.analyzeSymbol(symbol, candles, confirmCandlesBySymbolTf);
+        this.lastPriceBySymbol[symbol] = analysis.price;
         this.emit('analysis', analysis);
 
         const position = this.positions[symbol];
         if (position) {
-            this.updateTrailingStop(position, analysis.price, analysis.atr);
+            // Verifica liquidação se alavancado
+            if (position.liquidationPrice) {
+                const isLiquidated = position.side === 'BUY'
+                    ? analysis.price <= position.liquidationPrice
+                    : analysis.price >= position.liquidationPrice;
+                if (isLiquidated) {
+                    this.closePosition(symbol, position.liquidationPrice, now, 'LIQUIDATION');
+                    this.emit('stats', this.getStats());
+                    return analysis;
+                }
+            }
+
+            if (position.isTrailingStop || !position.isManual) {
+                this.updateTrailingStop(position, analysis.price, analysis.atr);
+            }
             const exitReason = this.checkExit(position, analysis.price, now);
             if (exitReason) this.closePosition(symbol, analysis.price, now, exitReason);
-        } else if (allowEntry) {
+        } else if (allowEntry && this.botAutoEnabled) {
             this.tryEnter(symbol, analysis, now);
         }
 
@@ -416,10 +579,6 @@ class TradingEngine extends EventEmitter {
         return analysis;
     }
 
-    // Todas as métricas abaixo vêm de acumuladores mantidos em O(1) por trade fechado
-    // (ver closePosition) — getStats() é chamado a cada tick, de cada símbolo, então
-    // re-escanear this.trades aqui seria O(n) por chamada e ficaria mais lento a cada
-    // trade novo, indefinidamente, numa operação de longa duração.
     getStats() {
         const total = this.tradeCount;
         const roi = ((this.balance - this.config.capital) / this.config.capital) * 100;
@@ -435,8 +594,33 @@ class TradingEngine extends EventEmitter {
             perSymbol[symbol] = { trades: s.trades, pnl: s.pnl, winRate: (s.wins / s.trades) * 100 };
         }
 
+        // Posições com cálculo de P&L não realizado e preço atual
+        const openPositions = Object.values(this.positions).map(p => {
+            const currentPrice = this.lastPriceBySymbol[p.symbol] || p.entryPrice;
+            const gross = p.side === 'BUY'
+                ? (currentPrice - p.entryPrice) * p.quantity
+                : (p.entryPrice - currentPrice) * p.quantity;
+            const margin = p.margin || (p.entryPrice * p.quantity);
+            const roePercent = margin > 0 ? (gross / margin) * 100 : 0;
+            return {
+                ...p,
+                currentPrice,
+                unrealizedPnl: gross,
+                unrealizedPnlPercent: roePercent
+            };
+        });
+
+        const totalUnrealizedPnl = openPositions.reduce((s, p) => s + (p.unrealizedPnl || 0), 0);
+        const usedMargin = openPositions.reduce((s, p) => s + (p.margin || (p.entryPrice * p.quantity)), 0);
+        const freeMargin = Math.max(0, this.balance - usedMargin);
+        const equity = this.balance + totalUnrealizedPnl;
+
         return {
             balance: this.balance,
+            equity,
+            freeMargin,
+            usedMargin,
+            totalUnrealizedPnl,
             initialCapital: this.config.capital,
             totalPnl: this.cumPnl,
             totalCosts: this.cumCosts,
@@ -448,7 +632,8 @@ class TradingEngine extends EventEmitter {
             profitFactor,
             maxDrawdownPercent: this.maxDrawdownPercent,
             avgTradeMinutes,
-            openPositions: Object.values(this.positions),
+            openPositions,
+            botAutoEnabled: this.botAutoEnabled,
             circuitBreakerTripped: this.circuitBreakerTripped,
             perSymbol
         };

@@ -1,22 +1,68 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const { prisma } = require('./db');
-const { hashPassword, verifyPassword, signToken, authenticate, optionalAuthenticate, requireAdmin } = require('./auth');
+const { hashPassword, verifyPassword, signToken, verifyToken, authenticate, optionalAuthenticate, requireAdmin } = require('./auth');
 const { isBillingConfigured, createCheckoutSession, constructWebhookEvent } = require('./billing');
-const { Simulator } = require('./simulator/simulator');
+const { SimulatorSessionManager } = require('./simulator/sessionManager');
 const { defaultSimulatorConfig } = require('./simulator/config');
 const { runBacktest } = require('./simulator/backtest');
 
 const app = express();
+
+// Proteção de cabeçalhos HTTP via Helmet
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: false, // Desabilitado no backend para permitir flexibilidade com SPA e conexões WebSocket
+}));
+
+// CORS flexível
 app.use(cors());
 
-// Simulador de trade educacional: uma única instância compartilhada, rodando continuamente
-// para todos os usuários logados verem em tempo real — não é um bot pessoal por conta,
-// é uma demonstração ao vivo e honesta de como uma estratégia quantitativa real se sai.
-const tradeSimulator = new Simulator({ ...defaultSimulatorConfig });
+// Rate Limiters para proteção contra DoS, Brute-force e abuso de IA/Backtest
+const generalLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 400,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Muitas requisições. Aguarde um momento antes de tentar novamente.' },
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Muitas tentativas de autenticação. Tente novamente em 15 minutos.' },
+});
+
+const aiLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Limite de consultas à IA atingido. Aguarde um minuto.' },
+});
+
+const backtestLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 15,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Limite de execuções de backtest atingido. Tente novamente em alguns minutos.' },
+});
+
+app.use('/api', generalLimiter);
+
+// Simulador de trade educacional: cada conta logada tem sua própria carteira simulada
+// (saldo, posições, histórico, reset), criada sob demanda no primeiro acesso — ver
+// sessionManager.js. Os dados de mercado (OKX) e o analista de IA continuam
+// compartilhados entre todas as sessões, só a contabilidade de cada usuário é isolada.
+const simulatorSessions = new SimulatorSessionManager({ ...defaultSimulatorConfig });
 
 // Envolve toda rota async: sem isso, um erro (ex: Prisma rejeitando uma query) vira uma
 // promise rejeitada sem handler e derruba o processo Node inteiro — uma única requisição
@@ -45,7 +91,7 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), wrap
     res.json({ received: true });
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 function publicUser(user) {
     return { id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan };
@@ -58,7 +104,7 @@ function isUnlocked(course, user) {
 
 // ---------- Auth ----------
 
-app.post('/api/auth/register', wrap(async (req, res) => {
+app.post('/api/auth/register', authLimiter, wrap(async (req, res) => {
     const { email, password, name } = req.body || {};
     if (!email || !password || password.length < 6) {
         return res.status(400).json({ error: 'E-mail e senha (mín. 6 caracteres) são obrigatórios.' });
@@ -72,7 +118,7 @@ app.post('/api/auth/register', wrap(async (req, res) => {
     res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
 
-app.post('/api/auth/login', wrap(async (req, res) => {
+app.post('/api/auth/login', authLimiter, wrap(async (req, res) => {
     const { email, password } = req.body || {};
     const user = email ? await prisma.user.findUnique({ where: { email } }) : null;
     if (!user || !(await verifyPassword(password || '', user.passwordHash))) {
@@ -321,9 +367,9 @@ app.post('/api/billing/checkout', authenticate, wrap(async (req, res) => {
 }));
 
 // ---------- Simulador de trade (educacional) ----------
-// Leitura de status/config/trades é pública (o objetivo é transparência: qualquer visitante
-// pode ver como a estratégia realmente se sai). Ações que custam recursos do servidor
-// compartilhado (rodar um backtest, consultar a IA) exigem login, para conter abuso.
+// Cada conta logada opera sua própria carteira simulada isolada (ver sessionManager.js) —
+// por isso toda rota abaixo exige login, inclusive as de leitura: não existe mais "o"
+// estado do simulador, só "o seu" estado.
 
 function redactSimulatorConfig(config) {
     const { aiAnalyst, ...safe } = config;
@@ -334,47 +380,116 @@ function redactSimulatorSnapshot(snapshot) {
     return { ...snapshot, config: redactSimulatorConfig(snapshot.config) };
 }
 
-app.get('/api/simulator/status', (req, res) => {
-    res.json(redactSimulatorSnapshot(tradeSimulator.getSnapshot()));
+app.get('/api/simulator/status', authenticate, (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    res.json(redactSimulatorSnapshot(sim.getSnapshot()));
 });
 
-app.get('/api/simulator/config', (req, res) => {
-    res.json(redactSimulatorConfig(tradeSimulator.config));
+app.get('/api/simulator/config', authenticate, (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    res.json(redactSimulatorConfig(sim.config));
 });
 
-app.get('/api/simulator/trades', (req, res) => {
-    res.json(tradeSimulator.engine.trades);
+app.get('/api/simulator/trades', authenticate, (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    res.json(sim.engine.trades);
 });
 
-app.post('/api/simulator/backtest', authenticate, wrap(async (req, res) => {
+app.post('/api/simulator/backtest', authenticate, backtestLimiter, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
     const days = Math.min(30, Math.max(1, Number(req.body?.days || 7)));
     try {
-        const result = await runBacktest({ ...tradeSimulator.config }, days);
+        const result = await runBacktest({ ...sim.config }, days);
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 }));
 
-app.post('/api/simulator/ai-chat', authenticate, wrap(async (req, res) => {
-    if (!tradeSimulator.aiAnalyst.isEnabled()) {
+app.post('/api/simulator/ai-chat', authenticate, aiLimiter, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    if (!sim.aiAnalyst.isEnabled()) {
         return res.status(400).json({ error: 'Analista de IA não configurado neste ambiente.' });
     }
     const history = Array.isArray(req.body?.messages) ? req.body.messages.slice(-20) : [];
     if (history.length === 0) return res.status(400).json({ error: 'Envie ao menos uma mensagem em "messages".' });
 
-    const reply = await tradeSimulator.chatWithAnalyst(history);
+    const reply = await sim.chatWithAnalyst(history);
     if (!reply) return res.status(502).json({ error: 'IA não respondeu (indisponível no momento).' });
     res.json({ reply });
 }));
 
-app.post('/api/simulator/ai-insight/:symbol', authenticate, wrap(async (req, res) => {
-    if (!tradeSimulator.aiAnalyst.isEnabled()) {
+app.post('/api/simulator/ai-insight/:symbol', authenticate, aiLimiter, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    if (!sim.aiAnalyst.isEnabled()) {
         return res.status(400).json({ error: 'Analista de IA não configurado neste ambiente.' });
     }
-    const text = await tradeSimulator.requestMarketRead(decodeURIComponent(req.params.symbol));
+    const text = await sim.requestMarketRead(decodeURIComponent(req.params.symbol));
     if (!text) return res.status(502).json({ error: 'IA não retornou análise (sem dados de mercado ainda, ou indisponível).' });
     res.json({ text });
+}));
+
+// ---------- Rotas de Operação Manual & Gestão de Posições (Exchange Style) ----------
+
+app.post('/api/simulator/trade/open', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    try {
+        const position = sim.openManualPosition(req.body || {});
+        res.status(201).json({ ok: true, position });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+}));
+
+app.post('/api/simulator/trade/close', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    const { symbol, reason } = req.body || {};
+    if (!symbol) return res.status(400).json({ error: 'Símbolo é obrigatório.' });
+    try {
+        const trade = sim.closePositionManual(symbol, reason || 'MANUAL_CLOSE');
+        res.json({ ok: true, trade });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+}));
+
+app.post('/api/simulator/trade/close-all', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    try {
+        const closed = sim.closeAllPositionsManual(req.body?.reason || 'MANUAL_CLOSE_ALL');
+        res.json({ ok: true, closedCount: closed.length, closed });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+}));
+
+app.post('/api/simulator/trade/update-stops', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    const { symbol, takeProfit, stopLoss, isTrailingStop } = req.body || {};
+    if (!symbol) return res.status(400).json({ error: 'Símbolo é obrigatório.' });
+    try {
+        const position = sim.updateStopsManual(symbol, { takeProfit, stopLoss, isTrailingStop });
+        res.json({ ok: true, position });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+}));
+
+app.post('/api/simulator/reset', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    try {
+        const initialCapital = Number(req.body?.initialCapital) || 10000;
+        const result = sim.resetAccount(initialCapital);
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+}));
+
+app.post('/api/simulator/toggle-bot', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    const result = sim.toggleBotAuto(req.body?.enabled);
+    res.json(result);
 }));
 
 // ---------- 404 + tratamento de erro global ----------
@@ -413,25 +528,39 @@ async function ensureSeeded() {
     }
 }
 
-// WebSocket do simulador de trade: transmite os mesmos eventos (log, analysis, trade_opened,
-// trade_closed, stats, etc.) para todo cliente conectado — é uma vitrine compartilhada, não
-// uma conexão por usuário.
+// WebSocket do simulador de trade: uma conexão por usuário, escutando só os eventos da
+// carteira DELE (ver sessionManager.js). O navegador não consegue mandar um header
+// Authorization num WebSocket, então o token vem via query string (?token=...) e é
+// validado aqui do mesmo jeito que o middleware `authenticate` faria numa rota REST.
+const SIMULATOR_WS_EVENTS = ['log', 'analysis', 'trade_opened', 'trade_closed', 'stats', 'optimizer', 'circuit_breaker', 'ai_insight'];
+
 const httpServer = http.createServer(app);
 const wss = new WebSocketServer({ server: httpServer, path: '/ws/simulator' });
 
-function broadcastSimulatorEvent(type, payload) {
-    const message = JSON.stringify({ type, payload });
-    for (const client of wss.clients) {
-        if (client.readyState === 1) client.send(message);
+wss.on('connection', (ws, req) => {
+    const url = new URL(req.url, 'http://localhost');
+    const token = url.searchParams.get('token');
+
+    let userId;
+    try {
+        userId = verifyToken(token).sub;
+    } catch {
+        ws.close(4001, 'Não autenticado');
+        return;
     }
-}
 
-for (const evt of ['log', 'analysis', 'trade_opened', 'trade_closed', 'stats', 'optimizer', 'circuit_breaker', 'ai_insight']) {
-    tradeSimulator.on(evt, (payload) => broadcastSimulatorEvent(evt, payload));
-}
+    const sim = simulatorSessions.getOrCreate(userId);
+    ws.send(JSON.stringify({ type: 'snapshot', payload: redactSimulatorSnapshot(sim.getSnapshot()) }));
 
-wss.on('connection', (ws) => {
-    ws.send(JSON.stringify({ type: 'snapshot', payload: redactSimulatorSnapshot(tradeSimulator.getSnapshot()) }));
+    const handlers = SIMULATOR_WS_EVENTS.map((evt) => {
+        const handler = (payload) => { if (ws.readyState === 1) ws.send(JSON.stringify({ type: evt, payload })); };
+        sim.on(evt, handler);
+        return [evt, handler];
+    });
+
+    ws.on('close', () => {
+        for (const [evt, handler] of handlers) sim.off(evt, handler);
+    });
 });
 
 ensureSeeded().finally(() => {
@@ -439,5 +568,4 @@ ensureSeeded().finally(() => {
         console.log(`iziCripto Platform API rodando em http://localhost:${PORT}`);
         console.log(`Billing (Stripe) configurado: ${isBillingConfigured()}`);
     });
-    tradeSimulator.start().catch((err) => console.error('[SIMULADOR] Falha ao iniciar:', err.message));
 });

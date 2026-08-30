@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { Badge } from '../components/ui/card.jsx';
 import { CourseCover } from '../components/CourseCover.jsx';
+import { Skeleton } from '../components/ui/Skeleton.jsx';
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
@@ -20,7 +21,20 @@ export function CourseDetailPage() {
   }, [courseId, user]);
 
   if (error) return <div className="max-w-4xl mx-auto px-6 py-16 text-muted">Curso não encontrado.</div>;
-  if (!course) return <div className="max-w-4xl mx-auto px-6 py-16 text-muted">Carregando...</div>;
+  if (!course) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-16 space-y-6">
+        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-4 w-3/4" />
+        <div className="space-y-3 pt-6">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   const totalMinutes = course.modules.reduce((s, m) => s + m.lessons.reduce((ss, l) => ss + l.durationMin, 0), 0);
   const firstLesson = course.modules[0]?.lessons[0];

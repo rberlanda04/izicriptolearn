@@ -20,13 +20,19 @@ function signToken(user) {
     return jwt.sign({ sub: user.id, role: user.role, plan: user.plan }, JWT_SECRET, { expiresIn: TOKEN_TTL });
 }
 
+// Reaproveitado pelo handshake do WebSocket do simulador (que não tem header
+// Authorization — o token chega via query string), além das duas rotas abaixo.
+function verifyToken(token) {
+    return jwt.verify(token, JWT_SECRET);
+}
+
 function authenticate(req, res, next) {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'Não autenticado.' });
 
     try {
-        req.user = jwt.verify(token, JWT_SECRET);
+        req.user = verifyToken(token);
         next();
     } catch {
         res.status(401).json({ error: 'Sessão inválida ou expirada.' });
@@ -39,7 +45,7 @@ function optionalAuthenticate(req, res, next) {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (token) {
-        try { req.user = jwt.verify(token, JWT_SECRET); } catch { /* ignora token inválido */ }
+        try { req.user = verifyToken(token); } catch { /* ignora token inválido */ }
     }
     next();
 }
@@ -49,4 +55,4 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-module.exports = { hashPassword, verifyPassword, signToken, authenticate, optionalAuthenticate, requireAdmin };
+module.exports = { hashPassword, verifyPassword, signToken, verifyToken, authenticate, optionalAuthenticate, requireAdmin };
