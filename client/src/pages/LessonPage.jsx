@@ -113,6 +113,15 @@ export function LessonPage() {
           {lesson.content?.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}
         </div>
 
+        {lesson.id === 'les-tr-0-1' && (
+          <Link
+            to="/simulador"
+            className="inline-flex items-center gap-2 mt-2 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm hover:bg-accent/90"
+          >
+            Abrir o Simulador de Trade <ArrowRight size={15} />
+          </Link>
+        )}
+
         <div className="flex items-center justify-between mt-12 pt-6 border-t border-border-soft">
           {prev ? (
             <Link to={`/cursos/${course.id}/aulas/${prev.id}`} className="flex items-center gap-2 text-sm font-medium text-muted hover:text-accent-deep">

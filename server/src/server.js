@@ -1,12 +1,22 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { WebSocketServer } = require('ws');
 const { prisma } = require('./db');
 const { hashPassword, verifyPassword, signToken, authenticate, optionalAuthenticate, requireAdmin } = require('./auth');
 const { isBillingConfigured, createCheckoutSession, constructWebhookEvent } = require('./billing');
+const { Simulator } = require('./simulator/simulator');
+const { defaultSimulatorConfig } = require('./simulator/config');
+const { runBacktest } = require('./simulator/backtest');
 
 const app = express();
 app.use(cors());
+
+// Simulador de trade educacional: uma única instância compartilhada, rodando continuamente
+// para todos os usuários logados verem em tempo real — não é um bot pessoal por conta,
+// é uma demonstração ao vivo e honesta de como uma estratégia quantitativa real se sai.
+const tradeSimulator = new Simulator({ ...defaultSimulatorConfig });
 
 // Envolve toda rota async: sem isso, um erro (ex: Prisma rejeitando uma query) vira uma
 // promise rejeitada sem handler e derruba o processo Node inteiro — uma única requisição
@@ -258,6 +268,63 @@ app.post('/api/billing/checkout', authenticate, wrap(async (req, res) => {
     }
 }));
 
+// ---------- Simulador de trade (educacional) ----------
+// Leitura de status/config/trades é pública (o objetivo é transparência: qualquer visitante
+// pode ver como a estratégia realmente se sai). Ações que custam recursos do servidor
+// compartilhado (rodar um backtest, consultar a IA) exigem login, para conter abuso.
+
+function redactSimulatorConfig(config) {
+    const { aiAnalyst, ...safe } = config;
+    return { ...safe, aiAnalyst: { enabled: Boolean(aiAnalyst?.enabled) } };
+}
+
+function redactSimulatorSnapshot(snapshot) {
+    return { ...snapshot, config: redactSimulatorConfig(snapshot.config) };
+}
+
+app.get('/api/simulator/status', (req, res) => {
+    res.json(redactSimulatorSnapshot(tradeSimulator.getSnapshot()));
+});
+
+app.get('/api/simulator/config', (req, res) => {
+    res.json(redactSimulatorConfig(tradeSimulator.config));
+});
+
+app.get('/api/simulator/trades', (req, res) => {
+    res.json(tradeSimulator.engine.trades);
+});
+
+app.post('/api/simulator/backtest', authenticate, wrap(async (req, res) => {
+    const days = Math.min(30, Math.max(1, Number(req.body?.days || 7)));
+    try {
+        const result = await runBacktest({ ...tradeSimulator.config }, days);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}));
+
+app.post('/api/simulator/ai-chat', authenticate, wrap(async (req, res) => {
+    if (!tradeSimulator.aiAnalyst.isEnabled()) {
+        return res.status(400).json({ error: 'Analista de IA não configurado neste ambiente.' });
+    }
+    const history = Array.isArray(req.body?.messages) ? req.body.messages.slice(-20) : [];
+    if (history.length === 0) return res.status(400).json({ error: 'Envie ao menos uma mensagem em "messages".' });
+
+    const reply = await tradeSimulator.chatWithAnalyst(history);
+    if (!reply) return res.status(502).json({ error: 'IA não respondeu (indisponível no momento).' });
+    res.json({ reply });
+}));
+
+app.post('/api/simulator/ai-insight/:symbol', authenticate, wrap(async (req, res) => {
+    if (!tradeSimulator.aiAnalyst.isEnabled()) {
+        return res.status(400).json({ error: 'Analista de IA não configurado neste ambiente.' });
+    }
+    const text = await tradeSimulator.requestMarketRead(decodeURIComponent(req.params.symbol));
+    if (!text) return res.status(502).json({ error: 'IA não retornou análise (sem dados de mercado ainda, ou indisponível).' });
+    res.json({ text });
+}));
+
 // ---------- 404 + tratamento de erro global ----------
 // Sem isso, qualquer erro não previsto (Prisma, bug de lógica, etc.) derruba o
 // processo Node inteiro em vez de responder 500 só para quem fez aquela requisição.
@@ -294,9 +361,31 @@ async function ensureSeeded() {
     }
 }
 
+// WebSocket do simulador de trade: transmite os mesmos eventos (log, analysis, trade_opened,
+// trade_closed, stats, etc.) para todo cliente conectado — é uma vitrine compartilhada, não
+// uma conexão por usuário.
+const httpServer = http.createServer(app);
+const wss = new WebSocketServer({ server: httpServer, path: '/ws/simulator' });
+
+function broadcastSimulatorEvent(type, payload) {
+    const message = JSON.stringify({ type, payload });
+    for (const client of wss.clients) {
+        if (client.readyState === 1) client.send(message);
+    }
+}
+
+for (const evt of ['log', 'analysis', 'trade_opened', 'trade_closed', 'stats', 'optimizer', 'circuit_breaker', 'ai_insight']) {
+    tradeSimulator.on(evt, (payload) => broadcastSimulatorEvent(evt, payload));
+}
+
+wss.on('connection', (ws) => {
+    ws.send(JSON.stringify({ type: 'snapshot', payload: redactSimulatorSnapshot(tradeSimulator.getSnapshot()) }));
+});
+
 ensureSeeded().finally(() => {
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
         console.log(`iziCripto Platform API rodando em http://localhost:${PORT}`);
         console.log(`Billing (Stripe) configurado: ${isBillingConfigured()}`);
     });
+    tradeSimulator.start().catch((err) => console.error('[SIMULADOR] Falha ao iniciar:', err.message));
 });

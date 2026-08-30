@@ -12,6 +12,7 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
 import { AdminListPage } from './pages/AdminListPage.jsx';
 import { AdminCourseEditorPage } from './pages/AdminCourseEditorPage.jsx';
+import { SimuladorPage } from './pages/SimuladorPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 
 export default function App() {
@@ -28,6 +29,10 @@ export default function App() {
             <Route path="/precos" element={<PricingPage />} />
             <Route path="/entrar" element={<LoginPage />} />
             <Route path="/registrar" element={<RegisterPage />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/simulador" element={<SimuladorPage />} />
+            </Route>
 
             <Route element={<ProtectedRoute role="admin" />}>
               <Route path="/admin" element={<AdminListPage />} />

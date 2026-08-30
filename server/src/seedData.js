@@ -487,6 +487,12 @@ const courses = [
         title: 'Antes de operar',
         lessons: [
           {
+            id: 'les-tr-0-1',
+            title: 'Pratique no Simulador de Trade (antes de arriscar dinheiro de verdade)',
+            durationMin: 4,
+            content: `Antes de entrar na teoria, vale conhecer o Simulador de Trade da plataforma — uma ferramenta que roda, ao vivo e com dados reais da OKX, exatamente a mesma estratégia quantitativa usada como exemplo neste curso. O saldo é 100% fictício; o comportamento do mercado é 100% real.\n\nO objetivo não é te mostrar um jeito de ganhar dinheiro. É o oposto: mostrar, com números reais e atualizados, o que de fato acontece quando uma estratégia baseada em indicadores técnicos (RSI, MACD, Bollinger Bands, médias móveis) enfrenta o mercado de verdade, depois de descontar taxa e slippage — os custos que a maioria do conteúdo sobre trading finge que não existem.\n\nHistoricamente, em backtests dessa mesma estratégia, o resultado líquido ficou perto de zero ou negativo na maior parte das janelas testadas — não porque a lógica seja mal implementada, mas porque bater o mercado de forma consistente é genuinamente difícil, mesmo com regras claras e disciplina perfeita (a disciplina perfeita, aliás, é fácil de simular e difícil de manter com dinheiro de verdade).\n\nUse o simulador para observar o comportamento do mercado em tempo real, testar backtests com períodos diferentes e conversar com o analista de IA sobre por que cada trade foi aberto ou fechado. Ele fica disponível, para qualquer conta logada, no menu principal em "Simulador".`,
+          },
+          {
             id: 'les-tr-1-1',
             title: 'Investir, especular e apostar: diferenças que importam',
             durationMin: 6,

@@ -1,11 +1,12 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { BookOpen, LayoutGrid, Library, LogOut, ShieldCheck, Tag, User } from 'lucide-react';
+import { BookOpen, LayoutGrid, Library, LineChart, LogOut, ShieldCheck, Tag, User } from 'lucide-react';
 import { Logo } from './Logo.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { cn } from '../lib/utils.js';
 
 const NAV = [
   { to: '/cursos', label: 'Cursos', icon: Library },
+  { to: '/simulador', label: 'Simulador', icon: LineChart },
   { to: '/glossario', label: 'Glossário', icon: BookOpen },
   { to: '/precos', label: 'Preços', icon: Tag },
 ];

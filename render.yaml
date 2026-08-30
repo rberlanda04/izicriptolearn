@@ -23,3 +23,7 @@ services:
         sync: false
       - key: STRIPE_PRICE_ID_PRO
         sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_MODEL
+        value: nvidia/nemotron-3-nano-30b-a3b

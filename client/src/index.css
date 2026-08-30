@@ -18,6 +18,9 @@
   --color-signal: #E8973A;
   --color-signal-soft: #3A2A15;
   --color-good: #2FAE6E;
+  /* Borda sutil sobre fundo escuro — usada só no simulador de trade (dashboard estilo
+     terminal), já que --color-border-soft foi desenhada para fundo claro. */
+  --color-sim-border: #28324A;
 
   --font-display: 'Montserrat', 'Segoe UI', sans-serif;
   --font-body: 'Varela Round', 'Segoe UI', sans-serif;
@@ -43,3 +46,8 @@ body {
 
 .lesson-content p { margin-bottom: 1.1em; line-height: 1.75; }
 .lesson-content p:last-child { margin-bottom: 0; }
+
+.font-mono-nums {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
