@@ -8,6 +8,8 @@ const CATEGORY_PROMPTS = {
   'Tokens & Governança': 'abstract geometric tokens and a ballot box, minimalist blue illustration',
   'Estabilidade & Risco': 'a balance scale made of glowing blue light, minimalist finance illustration',
   'Riscos & Golpes': 'a cracked glass shield with a warning glow, minimalist blue and amber illustration',
+  'Bitcoin': 'a glowing orange bitcoin symbol embedded in a network of connected nodes, minimalist tech illustration',
+  'Trading': 'an abstract glowing candlestick chart trending upward, minimalist blue and green finance illustration',
 };
 
 function stableSeed(id) {

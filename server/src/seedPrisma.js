@@ -4,7 +4,7 @@ const { hashPassword } = require('./auth');
 const { courses } = require('./seedData');
 
 // Cursos mais avançados ficam atrás do plano Pro, para demonstrar o paywall de verdade.
-const PRO_COURSE_IDS = new Set(['defi-na-pratica', 'stablecoins-e-risco']);
+const PRO_COURSE_IDS = new Set(['defi-na-pratica', 'stablecoins-e-risco', 'trading-e-gestao-de-risco']);
 
 async function seed() {
     for (const [ci, course] of courses.entries()) {

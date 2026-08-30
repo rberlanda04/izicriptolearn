@@ -1,6 +1,8 @@
 node_modules/
 .env
+.env.production
 dist/
 *.log
 server/prisma/dev.db
 server/prisma/dev.db-journal
+.firebase/

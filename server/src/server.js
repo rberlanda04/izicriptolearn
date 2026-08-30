@@ -278,20 +278,17 @@ process.on('unhandledRejection', (err) => {
 
 const PORT = process.env.PORT || 4100;
 
-// Auto-seed no boot: em hosts de plano gratuito (ex: Render free tier) o disco não é
-// garantidamente persistente entre reinícios — a instância pode "dormir" por inatividade
-// e voltar com um banco vazio. Isso recria o catálogo de cursos e o admin automaticamente
-// sempre que faltarem, sem depender de rodar `npm run seed` manualmente toda vez.
-// Não resolve a perda de contas/progresso criados por usuários reais nesse cenário —
-// para isso, migrar DATABASE_URL para um Postgres hospedado (ver plano de escalabilidade).
+// Auto-seed no boot, sempre (não só quando o banco está vazio): em hosts de plano gratuito
+// (ex: Render free tier) o disco não é garantidamente persistente entre reinícios — a
+// instância pode "dormir" por inatividade e voltar com um banco vazio, recriando catálogo
+// e admin automaticamente. Rodar sempre (não só quando courseCount===0) também garante que
+// cursos novos adicionados a seedData.js entrem em produção no próximo deploy, sem precisar
+// de acesso manual ao banco remoto — seed() usa upsert por id de curso, então isso nunca
+// apaga módulos/aulas de cursos já existentes nem contas/progresso de usuários reais.
 async function ensureSeeded() {
     try {
-        const courseCount = await prisma.course.count();
-        if (courseCount === 0) {
-            console.log('Banco vazio — aplicando seed inicial (cursos + admin)...');
-            const { seed } = require('./seedPrisma');
-            await seed();
-        }
+        const { seed } = require('./seedPrisma');
+        await seed();
     } catch (err) {
         console.error('[SEED] Falha ao verificar/aplicar seed inicial:', err.message);
     }

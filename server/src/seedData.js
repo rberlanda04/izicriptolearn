@@ -392,6 +392,171 @@ const courses = [
       },
     ],
   },
+  {
+    id: 'bitcoin-rede-e-halving',
+    title: 'Bitcoin: Rede, Mineração e Halving',
+    summary: 'Como o Bitcoin funciona por dentro — escassez programada, mineração, segurança da rede e o que os dados realmente mostram sobre ele como reserva de valor.',
+    level: 'intermediario',
+    category: 'Bitcoin',
+    modules: [
+      {
+        id: 'mod-btc-1',
+        title: 'Como o Bitcoin realmente funciona',
+        lessons: [
+          {
+            id: 'les-btc-1-1',
+            title: 'A escassez programada de 21 milhões',
+            durationMin: 7,
+            content: `O Bitcoin tem um limite máximo de emissão fixado no próprio protocolo: nunca vão existir mais de 21 milhões de unidades. Esse número não é uma meta ou uma promessa de marketing — é uma regra matemática que qualquer nó da rede pode verificar de forma independente, e que só mudaria se a esmagadora maioria da rede concordasse em alterar o protocolo, algo que nunca aconteceu com essa regra específica.\n\nA emissão de novos bitcoins acontece através da mineração, como recompensa paga a quem processa blocos de transações. Essa recompensa começou em 50 BTC por bloco em 2009 e vem sendo cortada pela metade periodicamente, num evento chamado halving — por isso a emissão total se aproxima de 21 milhões de forma decrescente, sem nunca ultrapassar o limite.\n\nEssa escassez é frequentemente comparada a metais preciosos como o ouro, mas com uma diferença importante: a escassez do Bitcoin é verificável matematicamente por qualquer pessoa com um nó completo, enquanto a escassez real de reservas de ouro depende de estimativas geológicas e de confiança em quem reporta essas estimativas.\n\nÉ importante separar dois fatos: escassez programada é uma característica técnica real e verificável; ela não é, sozinha, uma garantia de valorização futura. Um ativo pode ser escasso e ainda assim perder valor de mercado, se a demanda por ele cair.`,
+          },
+          {
+            id: 'les-btc-1-2',
+            title: 'O que é mineração, de verdade',
+            durationMin: 8,
+            diagramKey: 'pow-vs-pos',
+            content: `Minerar Bitcoin não é "resolver um problema matemático útil" no sentido de pesquisa científica — é competir para ser o primeiro a encontrar um número (chamado nonce) que, combinado com os dados do bloco, produza um hash abaixo de um valor-alvo definido pela rede. Esse processo, chamado Proof of Work, só pode ser feito por tentativa e erro: não existe atalho matemático conhecido, só poder de processamento.\n\nQuem encontra esse número primeiro propõe o próximo bloco à rede e recebe a recompensa: os bitcoins recém-emitidos mais as taxas de todas as transações incluídas naquele bloco. Todos os outros mineradores descartam o trabalho que estavam fazendo e recomeçam a competição para o bloco seguinte.\n\nEsse gasto de energia real e verificável é, propositalmente, o que torna caro forjar o histórico da rede: para reescrever um bloco antigo, seria preciso refazer todo esse trabalho computacional mais rápido do que o resto da rede consegue produzir novos blocos legítimos — algo economicamente inviável numa rede do tamanho do Bitcoin hoje.\n\nA dificuldade do problema se ajusta automaticamente a cada 2016 blocos (cerca de duas semanas) para manter o tempo médio entre blocos perto de 10 minutos, independentemente de quanto poder computacional total a rede tenha naquele momento.`,
+          },
+          {
+            id: 'les-btc-1-3',
+            title: 'Halving: por que acontece e o que muda',
+            durationMin: 7,
+            content: `A cada 210.000 blocos minerados — aproximadamente a cada quatro anos — a recompensa por bloco é cortada pela metade: de 50 para 25, depois 12,5, depois 6,25, e assim por diante, até eventualmente chegar a zero, por volta do ano 2140.\n\nO efeito direto e imediato do halving é reduzir a taxa de novos bitcoins entrando em circulação a cada dia. O efeito sobre o preço de mercado é bem mais incerto do que costuma ser apresentado: reduzir a oferta nova só pressiona o preço para cima se a demanda se mantiver constante ou crescer — algo que não é garantido, e que depende de fatores completamente alheios ao protocolo, como cenário macroeconômico, regulação e sentimento geral de mercado.\n\nHistoricamente, os halvings anteriores foram seguidos por períodos de valorização significativa, mas também por quedas expressivas meses depois — e quatro eventos históricos não são uma amostra estatística grande o suficiente para tratar esse padrão como uma lei confiável. Tratar "o halving vai fazer o preço subir" como uma certeza é um raciocínio mais próximo de superstição de mercado do que de análise financeira.\n\nUm efeito colateral real e menos discutido: quando a recompensa em bitcoins cai, a receita dos mineradores cai junto (a menos que o preço suba o suficiente para compensar), o que pode forçar operações menos eficientes a desligar equipamentos — reduzindo temporariamente o hash rate total da rede até a dificuldade se reajustar.`,
+          },
+        ],
+      },
+      {
+        id: 'mod-btc-2',
+        title: 'Rede e segurança',
+        lessons: [
+          {
+            id: 'les-btc-2-1',
+            title: 'Hash rate: a métrica de segurança da rede',
+            durationMin: 6,
+            content: `Hash rate é a soma de todo o poder computacional dedicado a minerar Bitcoin em um dado momento, medido em tentativas de hash por segundo. Quanto maior o hash rate total, mais caro e difícil fica para qualquer entidade única acumular poder computacional suficiente para atacar a rede.\n\nO cenário de risco mais discutido é o chamado "ataque de 51%": se uma única entidade (ou um grupo coordenado) controlar mais da metade do hash rate total, ela ganha a capacidade de, em teoria, reverter suas próprias transações recentes ou impedir que transações de terceiros sejam confirmadas — mas mesmo nesse cenário extremo, ela não consegue criar bitcoins do nada, nem roubar fundos de carteiras que não controla, nem alterar transações já profundamente enterradas no histórico.\n\nNo tamanho atual da rede Bitcoin, acumular hash rate suficiente para um ataque de 51% exigiria um investimento em hardware e energia elétrica na casa de bilhões de dólares, além da dificuldade logística de adquirir esse hardware sem ser notado — o que torna esse ataque uma possibilidade teórica remota, não uma ameaça prática atual, embora a matemática por trás dele seja real.`,
+          },
+          {
+            id: 'les-btc-2-2',
+            title: 'Nó completo vs. minerador: papéis diferentes',
+            durationMin: 6,
+            content: `É comum confundir os dois papéis, mas eles são distintos. Um nó completo (full node) baixa e verifica de forma independente todo o histórico de transações da blockchain, checando que cada bloco e cada transação segue as regras do protocolo — qualquer pessoa pode rodar um em um computador comum, sem hardware especializado.\n\nJá o minerador é quem compete para produzir novos blocos, usando hardware especializado (ASICs, hoje em dia) e consumo de energia elevado. Um minerador também roda um nó completo por trás, mas a atividade de "propor blocos" é uma camada adicional além de apenas verificar o histórico.\n\nEsse desenho é o que garante que o poder de decidir as regras do protocolo não fica concentrado só em quem tem mais hardware: se os mineradores tentassem produzir blocos que quebrassem as regras, os nós completos — inclusive os rodados por usuários comuns, exchanges e desenvolvedores — simplesmente rejeitariam esses blocos como inválidos, tornando o esforço de mineração inútil. É essa rejeição descentralizada, e não apenas o hash rate, que efetivamente define as regras que valem.`,
+          },
+          {
+            id: 'les-btc-2-3',
+            title: 'Lightning Network: pagamentos instantâneos por fora da camada principal',
+            durationMin: 7,
+            content: `A blockchain principal do Bitcoin processa, na prática, algumas transações por segundo — suficiente para liquidação de valor com alta segurança, mas inadequado para usar como meio de pagamento do dia a dia em grande escala, como comprar um café. A Lightning Network foi criada para resolver esse gargalo sem alterar as regras da camada principal.\n\nO funcionamento básico: duas partes abrem um "canal de pagamento" registrando uma transação na blockchain principal, depositando fundos nele. A partir daí, elas podem trocar qualquer quantidade de pagamentos entre si instantaneamente e com taxas mínimas, sem registrar cada transação individual na blockchain — apenas a abertura e o fechamento do canal ficam registrados on-chain.\n\nCanais podem ser conectados entre si, formando uma rede: você pode pagar alguém com quem nunca abriu um canal diretamente, desde que exista um caminho de canais conectados entre vocês, com o pagamento sendo roteado automaticamente por esse caminho.\n\nO trade-off é real: para receber pagamentos pela Lightning, é preciso ter liquidez travada no canal, a gestão de canais tem complexidade técnica maior que uma transação on-chain simples, e a rede ainda é mais nova e menos testada em escala do que a camada principal — não é uma tecnologia livre de riscos ou de curva de aprendizado.`,
+          },
+        ],
+      },
+      {
+        id: 'mod-btc-3',
+        title: 'Bitcoin como reserva de valor',
+        lessons: [
+          {
+            id: 'les-btc-3-1',
+            title: 'Volatilidade e ciclos: o que os dados históricos mostram (e não mostram)',
+            durationMin: 7,
+            content: `O histórico de preço do Bitcoin mostra ciclos de valorização extrema seguidos de quedas de 70% a 80% do topo — isso não é uma exceção rara, é um padrão que se repetiu em múltiplos ciclos ao longo da história do ativo. Qualquer análise que ignore essa volatilidade característica está incompleta.\n\nEsses ciclos são frequentemente associados aos halvings, mas também coincidem com mudanças no cenário macroeconômico global (taxas de juros, liquidez em dólar, apetite geral por risco), o que torna difícil isolar uma única causa para qualquer movimento específico de preço.\n\nA volatilidade histórica alta não significa que o padrão vá necessariamente se repetir da mesma forma no futuro — mercados evoluem, a base de investidores institucionais mudou significativamente nos últimos anos, e eventos passados não são garantia estatística de eventos futuros. Qualquer projeção de preço que ignore essa incerteza fundamental deve ser tratada com ceticismo, venha ela de onde vier.`,
+          },
+          {
+            id: 'les-btc-3-2',
+            title: 'Dollar-Cost Averaging sem promessas de retorno',
+            durationMin: 6,
+            content: `Dollar-Cost Averaging (DCA) é a estratégia de investir um valor fixo em intervalos regulares (semanal, mensal), independentemente do preço no momento, em vez de tentar acertar o momento "ideal" de comprar tudo de uma vez.\n\nA vantagem prática do DCA não é matemática — em retrospecto, comprar tudo no ponto mais baixo sempre teria rendido mais — a vantagem é comportamental: ele remove a necessidade (e a tentação, quase sempre mal-sucedida) de prever o fundo do mercado, e reduz o impacto emocional de ver o preço cair logo após um aporte único grande.\n\nDCA não elimina o risco de perda: se o ativo perder valor de forma sustentada e prolongada, uma estratégia de DCA também perde dinheiro, só que de forma mais gradual e psicologicamente mais suportável do que um aporte único no pior momento possível. Nenhuma estratégia de entrada, por si só, torna um ativo de risco elevado em um ativo seguro.`,
+          },
+          {
+            id: 'les-btc-3-3',
+            title: 'Autocustódia: por que "not your keys, not your coins" também vale pro Bitcoin',
+            durationMin: 6,
+            diagramKey: 'custody-spectrum',
+            content: `Tudo que foi coberto no curso de Carteiras e Segurança sobre custódia se aplica integralmente ao Bitcoin, e vale reforçar aqui pelo tamanho do valor tipicamente envolvido: manter Bitcoin numa exchange significa que você tem um direito contratual sobre um saldo, não a posse direta do ativo — a exchange é quem efetivamente controla as chaves privadas.\n\nHistoricamente, algumas das maiores perdas de Bitcoin por usuários comuns não vieram de falhas do protocolo (que nunca foi comprometido em seu mecanismo central), e sim de falências, hacks ou fraudes de exchanges centralizadas onde os fundos estavam depositados.\n\nPara quantias que você pretende manter por longo prazo, mover para uma carteira própria (hardware wallet, para valores maiores) onde só você controla a chave privada elimina esse risco de contraparte específico — trocando-o pelo risco, também real, de você mesmo perder ou expor essa chave. A escolha entre os dois riscos deve ser deliberada, não por omissão.`,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'trading-e-gestao-de-risco',
+    title: 'Trading e Gestão de Risco',
+    summary: 'Por que a maioria perde dinheiro operando, o que a análise técnica realmente prevê, e as regras de gestão de risco que separam sobreviver de quebrar a conta.',
+    level: 'intermediario',
+    category: 'Trading',
+    modules: [
+      {
+        id: 'mod-tr-1',
+        title: 'Antes de operar',
+        lessons: [
+          {
+            id: 'les-tr-1-1',
+            title: 'Investir, especular e apostar: diferenças que importam',
+            durationMin: 6,
+            content: `Investir, especular e apostar não são sinônimos, mesmo que na prática envolvam colocar dinheiro em algo incerto. Investir geralmente significa alocar capital com expectativa de retorno baseada em algum fundamento (fluxo de caixa, utilidade real, crescimento de rede), com um horizonte de tempo longo o suficiente para esse fundamento se realizar.\n\nEspecular é apostar em movimento de preço no curto prazo, frequentemente sem relação direta com fundamentos — o especulador está tentando prever o comportamento de outros participantes do mercado, não o valor "real" do ativo. Especular não é imoral nem irracional por definição, mas é um jogo estatisticamente mais difícil do que costuma parecer, especialmente contra participantes mais experientes ou com mais informação.\n\nApostar, no sentido estrito, é colocar dinheiro num resultado de probabilidade conhecida e desfavorável no agregado (como um cassino). A linha entre "especular" e "apostar" fica perigosamente tênue quando alguém opera sem nenhuma estratégia, sem gestão de risco e movido inteiramente por impulso — nesse ponto, a diferença prática desaparece.`,
+          },
+          {
+            id: 'les-tr-1-2',
+            title: 'Por que a maioria de quem opera perde dinheiro',
+            durationMin: 7,
+            content: `Estudos e dados divulgados por corretoras (que são obrigadas, em algumas jurisdições, a publicar essas estatísticas para produtos alavancados) mostram consistentemente que a maioria das contas de varejo que operam ativamente perde dinheiro no longo prazo — em muitos levantamentos, a proporção fica entre 70% e 90% das contas.\n\nAs razões mais comuns não são "falta de uma dica boa": são custos de transação e spread que corroem lucros pequenos e frequentes, ausência de gestão de risco (posições grandes demais, sem stop-loss), viés de confirmação (buscar só informação que confirma a posição que já se tem) e comportamento reativo a notícias e movimentos de curto prazo, que tende a levar a comprar caro por euforia e vender barato por pânico.\n\nIsso não significa que seja impossível operar de forma lucrativa e consistente — existem traders profissionais que o fazem — mas significa que fazer isso de forma sustentável exige disciplina, gestão de risco rigorosa e realismo sobre taxas de acerto, não sorte ou uma estratégia secreta infalível. Qualquer pessoa vendendo um método "sem erro" para operar está, no mínimo, sendo imprecisa.`,
+          },
+          {
+            id: 'les-tr-1-3',
+            title: 'Spot, margem e derivativos: o que muda no risco',
+            durationMin: 7,
+            content: `Operar no mercado à vista (spot) significa comprar e vender o ativo real, com seu próprio capital — a perda máxima possível é limitada a 100% do que você investiu, se o ativo for a zero.\n\nOperar com margem significa emprestar capital adicional (da própria corretora, tipicamente) para abrir uma posição maior do que seu capital próprio permitiria — isso amplifica tanto ganhos quanto perdas proporcionalmente, e pode gerar uma dívida além do capital inicial investido caso a posição se mova contra você antes de ser liquidada.\n\nDerivativos como contratos futuros e perpétuos alavancados levam essa amplificação ainda mais longe: alavancagens de 10x, 50x ou até mais são oferecidas em algumas plataformas, o que significa que um movimento de preço de apenas 2% a 10% contra a posição pode ser suficiente para liquidar (zerar) toda a margem colocada, dependendo da alavancagem escolhida.\n\nQuanto maior a alavancagem, menor a margem de erro tolerável — não existe alavancagem "segura" no sentido absoluto, existe alavancagem compatível ou incompatível com o tamanho da posição e com a sua tolerância real a perdas rápidas e totais.`,
+          },
+        ],
+      },
+      {
+        id: 'mod-tr-2',
+        title: 'Ferramentas de análise',
+        lessons: [
+          {
+            id: 'les-tr-2-1',
+            title: 'Análise técnica: o que ela pode e não pode prever',
+            durationMin: 7,
+            content: `Análise técnica é o estudo do histórico de preço e volume de um ativo para tentar identificar padrões que se repetem e informar decisões de entrada e saída. Ela parte da premissa de que o comportamento coletivo de compradores e vendedores deixa rastros reconhecíveis no gráfico.\n\nO que ela pode oferecer, de forma realista: um framework estruturado para definir pontos de entrada, saída e stop-loss, e uma linguagem comum para descrever tendências e níveis de preço relevantes onde historicamente houve reação de compra ou venda.\n\nO que ela não pode oferecer, apesar de como às vezes é vendida: previsão garantida de movimentos futuros. Padrões técnicos são probabilísticos, não determinísticos — o mesmo padrão que "funcionou" em um caso histórico falha em muitos outros, e não existe validação estatística robusta e amplamente aceita de que qualquer padrão específico tenha uma taxa de acerto consistentemente alta o suficiente para ser usado isoladamente, sem gestão de risco.\n\nTratar análise técnica como um sistema de previsão infalível é o erro mais comum de quem está começando — o uso mais honesto dela é como uma ferramenta de estruturação de risco, não de adivinhação.`,
+          },
+          {
+            id: 'les-tr-2-2',
+            title: 'Indicadores básicos sem misticismo: médias móveis e RSI',
+            durationMin: 6,
+            content: `Uma média móvel é simplesmente a média do preço de um ativo ao longo de um número definido de períodos (por exemplo, 50 ou 200 dias), recalculada continuamente. Ela suaviza o ruído de curto prazo do preço, ajudando a visualizar a direção geral de uma tendência — mas, por definição, ela reage ao que já aconteceu, não ao que vai acontecer.\n\nO RSI (Índice de Força Relativa) mede a velocidade e magnitude de movimentos recentes de preço numa escala de 0 a 100, sendo tradicionalmente interpretado como "sobrecomprado" acima de 70 e "sobrevendido" abaixo de 30. Esses limiares são convenções amplamente usadas, não leis físicas — um ativo em tendência forte pode permanecer "sobrecomprado" por muito tempo antes de qualquer correção.\n\nAmbos os indicadores são derivados matematicamente do próprio preço — eles não trazem nenhuma informação nova que não estivesse já, de alguma forma, no gráfico de preço original. Eles ajudam a organizar a leitura visual, não substituem a necessidade de gestão de risco.`,
+          },
+          {
+            id: 'les-tr-2-3',
+            title: 'Liquidez e slippage: o preço que você vê não é o preço que você paga',
+            durationMin: 7,
+            diagramKey: 'market-metrics',
+            content: `O preço exibido numa exchange geralmente reflete a última transação executada — não necessariamente o preço pelo qual você conseguirá comprar ou vender uma quantidade específica agora. Slippage é a diferença entre o preço esperado e o preço efetivamente executado.\n\nEm ativos com baixa liquidez (pouco volume de compra e venda disponível perto do preço atual), uma ordem de tamanho moderado pode "consumir" várias camadas de ofertas de preço no livro de ofertas, resultando numa execução média bem pior do que o preço que estava sendo exibido antes da ordem.\n\nIsso é especialmente relevante em tokens de baixa capitalização de mercado: o preço marginal (o de uma transação pequena) pode estar muito distante do preço que você conseguiria realmente obter para uma posição de tamanho relevante — tanto na compra quanto, principalmente, na saída, quando você mais precisa de liquidez disponível.\n\nAntes de assumir uma posição, vale considerar não só "esse ativo pode subir", mas "se eu precisar sair rápido, existe liquidez suficiente para eu sair sem um deslizamento de preço que destrua o ganho esperado?".`,
+          },
+        ],
+      },
+      {
+        id: 'mod-tr-3',
+        title: 'Gestão de risco de verdade',
+        lessons: [
+          {
+            id: 'les-tr-3-1',
+            title: 'Tamanho de posição e stop-loss: as duas variáveis que você controla',
+            durationMin: 7,
+            content: `Você não controla se um trade vai dar certo. Você controla, com precisão, duas coisas: quanto capital arrisca em cada operação, e em que ponto de perda você sai automaticamente se estiver errado.\n\nUma prática amplamente usada por gestores de risco profissionais é limitar o risco de qualquer operação individual a uma fração pequena do capital total disponível para operar — frequentemente entre 0,5% e 2% por operação — de forma que uma sequência de várias operações perdedoras seguidas (que vai acontecer, mesmo com uma boa estratégia) não seja capaz de comprometer a capacidade de continuar operando.\n\nO stop-loss é a ordem que fecha automaticamente a posição se o preço atingir um nível predefinido de perda aceitável, definido antes de entrar na operação — não depois, quando a perda já está maior do que o planejado e o vínculo emocional com a posição já distorce o julgamento.\n\nEssas duas variáveis, combinadas, definem matematicamente sua perda máxima possível numa operação — algo que a maioria de quem perde dinheiro operando nunca calculou explicitamente antes de entrar.`,
+          },
+          {
+            id: 'les-tr-3-2',
+            title: 'O erro clássico: aumentar uma posição perdedora',
+            durationMin: 6,
+            content: `Aumentar uma posição perdedora esperando que o preço "volte" — às vezes chamado de "fazer preço médio para baixo" — é uma das formas mais consistentes de transformar uma perda administrável numa perda catastrófica.\n\nA lógica que motiva essa decisão é psicologicamente compreensível: se o ativo estava bom no preço anterior, mais barato deveria ser ainda melhor. O problema é que essa lógica ignora a possibilidade real de que a tese original estava simplesmente errada, e que o preço pode continuar caindo por razões que não têm relação nenhuma com o quanto você já investiu nele.\n\nA diferença entre "adicionar a uma posição vencedora, dentro de um plano de gestão de risco pré-definido" e "aumentar uma posição perdedora por apego emocional ou negação" não está na ação em si, está em ter (ou não ter) decidido esse critério antes da operação começar, com a cabeça fria — e não durante o momento de maior desconforto financeiro, quando o julgamento tende a estar mais comprometido.`,
+          },
+          {
+            id: 'les-tr-3-3',
+            title: 'Psicologia: FOMO, revenge trading e disciplina',
+            durationMin: 7,
+            content: `FOMO ("fear of missing out", medo de ficar de fora) leva a entrar numa posição tarde demais, geralmente perto de um topo de curto prazo, motivado pelo desconforto de ver outras pessoas "ganhando" enquanto você fica de fora — não por uma análise própria do momento de entrada.\n\nRevenge trading é o padrão de, logo após uma perda, abrir uma nova posição maior e mais impulsiva na tentativa de "recuperar" rapidamente o que foi perdido — geralmente pulando por cima de toda a gestão de risco que seria seguida em condições normais, precisamente no momento em que o julgamento está mais comprometido pela frustração.\n\nAmbos os padrões têm a mesma raiz: decisões tomadas sob emoção intensa (euforia ou frustração) em vez de seguir um plano definido com a cabeça fria. A defesa mais eficaz e mais chata de implementar é também a mais simples: definir as regras de entrada, saída, tamanho de posição e stop-loss antes de abrir qualquer operação, e tratar o desvio dessas regras no calor do momento como uma falha de processo — não como uma exceção justificável "só dessa vez".\n\nQuem opera profissionalmente por muito tempo geralmente relata que a parte mais difícil não é encontrar boas oportunidades, é manter a disciplina de seguir o próprio plano quando a emoção do momento empurra na direção contrária.`,
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 module.exports = { courses };
