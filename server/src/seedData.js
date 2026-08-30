@@ -22,6 +22,7 @@ const courses = [
             id: 'les-fb-1-2',
             title: 'Blocos, hashes e a cadeia',
             durationMin: 8,
+            diagramKey: 'blockchain-chain',
             content: `Uma blockchain organiza transações em blocos — pense num bloco como uma página de um livro contábil, com um conjunto de transações registradas nela. Cada página nova é adicionada ao final do livro, nunca no meio.\n\nO que impede alguém de rasgar uma página antiga e reescrevê-la é o hash: uma função matemática que pega qualquer quantidade de dados e produz um código curto e único, como uma impressão digital. Cada bloco novo guarda o hash do bloco anterior dentro de si. Se você mudar uma única letra de uma transação antiga, o hash daquele bloco muda completamente — e, como o próximo bloco depende desse hash, ele também ficaria inválido, e o próximo, e o próximo.\n\nPara "consertar" um registro antigo de forma que a rede aceitasse, seria preciso recalcular todos os blocos seguintes e convencer a maioria dos nós, ao mesmo tempo, a aceitar essa nova versão — em redes grandes e ativas, isso exige um poder computacional (ou capital, no caso de Proof of Stake) tão grande que, na prática, deixa de ser viável.\n\nÉ importante notar a palavra "na prática": isso não é uma impossibilidade matemática absoluta, é uma barreira econômica. Redes pequenas e pouco distribuídas já sofreram ataques desse tipo. O tamanho e a distribuição real da rede importam mais do que a tecnologia em si.`,
           },
           {
@@ -40,6 +41,7 @@ const courses = [
             id: 'les-fb-2-1',
             title: 'O problema da confiança distribuída',
             durationMin: 6,
+            diagramKey: 'transaction-flow',
             content: `Se milhares de computadores independentes guardam cópias do mesmo livro-razão, como garantir que todos concordam sobre qual é a versão correta — especialmente quando duas transações conflitantes chegam quase ao mesmo tempo, ou quando alguém tenta gastar o mesmo dinheiro duas vezes (o chamado "double spending")?\n\nEsse é o problema central que qualquer blockchain precisa resolver, e a solução se chama mecanismo de consenso: um conjunto de regras que determina como a rede escolhe, de forma objetiva e sem depender de uma autoridade central, qual será o próximo bloco válido.\n\nOs dois mecanismos mais conhecidos são Proof of Work e Proof of Stake, e a escolha entre eles tem implicações reais de custo, velocidade, segurança e impacto ambiental — não é só um detalhe técnico de bastidores.`,
           },
           {
@@ -52,6 +54,7 @@ const courses = [
             id: 'les-fb-2-3',
             title: 'Proof of Stake: segurança via capital em risco',
             durationMin: 7,
+            diagramKey: 'pow-vs-pos',
             content: `No Proof of Stake (usado pela Ethereum desde setembro de 2022, numa transição conhecida como "The Merge"), não existe competição por poder computacional. Em vez disso, participantes chamados de validadores travam ("stake") uma quantidade de criptomoeda como garantia e são sorteados, proporcionalmente ao que travaram, para propor e confirmar blocos.\n\nA segurança vem de outro tipo de custo: se um validador tenta trapacear (por exemplo, validar duas versões conflitantes do histórico), uma parte do capital que ele travou é destruída automaticamente pelo protocolo — mecanismo chamado de "slashing". Errar ou trapacear custa dinheiro real e imediato, não eletricidade.\n\nO consumo de energia do Proof of Stake é drasticamente menor — a própria Ethereum estima uma redução de mais de 99% após a transição. Em compensação, esse modelo levanta outra discussão: quem já tem mais capital consegue validar mais blocos e ganhar mais recompensas, o que pode, ao longo do tempo, concentrar poder de validação em poucos participantes grandes.`,
           },
         ],
@@ -64,6 +67,7 @@ const courses = [
             id: 'les-fb-3-1',
             title: 'Market cap, volume e liquidez',
             durationMin: 7,
+            diagramKey: 'market-metrics',
             content: `Três números aparecem em qualquer site de cotação, e é fácil interpretá-los errado.\n\nMarket cap (capitalização de mercado) é o preço de uma unidade multiplicado pelo total de unidades em circulação. Ele mostra o tamanho relativo de um ativo, mas não diz nada sobre a qualidade do projeto — é perfeitamente possível um token com pouquíssimo uso real ter um market cap alto, simplesmente porque seu preço foi inflado artificialmente com baixa liquidez.\n\nVolume mostra quanto foi negociado num período (geralmente 24h). Volume muito baixo é um sinal de alerta: significa que poucas pessoas estão comprando e vendendo aquele ativo, o que facilita manipulação de preço por quem tem mais capital.\n\nLiquidez mostra o quão fácil é comprar ou vender uma quantidade razoável do ativo sem mover o preço sozinho. Baixa liquidez significa que, mesmo que o "preço" mostrado pareça atrativo, tentar vender uma posição grande pode derrubar o preço no processo — um problema comum em tokens novos e pouco negociados.\n\nNenhuma dessas três métricas, isoladamente, diz se vale a pena. Elas servem para triangular: um projeto com market cap alto, volume real consistente e liquidez saudável já eliminou algumas das bandeiras vermelhas mais óbvias — mas isso ainda não é uma recomendação, é só o começo da análise.`,
           },
           {
@@ -97,6 +101,7 @@ const courses = [
             id: 'les-cs-1-2',
             title: 'Hot wallet vs. cold wallet',
             durationMin: 6,
+            diagramKey: 'custody-spectrum',
             content: `Independente de ser custodial ou não, uma carteira também se classifica por estar ou não conectada à internet.\n\nUma hot wallet fica conectada — um app no celular, uma extensão no navegador. É prática para o dia a dia: você assina transações rapidamente, interage com aplicativos descentralizados, movimenta pequenos valores com facilidade. A desvantagem é a superfície de ataque: qualquer malware no seu dispositivo, extensão maliciosa, ou site de phishing tem, em teoria, uma via de acesso até ela.\n\nUma cold wallet fica desconectada da internet na maior parte do tempo — o exemplo mais comum é um hardware wallet, um dispositivo físico dedicado só a guardar chaves e assinar transações offline, conectando-se ao computador apenas no momento da assinatura. Isso reduz drasticamente a exposição a ataques remotos, ao custo de ser mais lenta e menos prática para uso frequente.\n\nA prática recomendada por especialistas em segurança é segmentar: usar uma hot wallet com pouco capital para o dia a dia, e uma cold wallet para guardar a maior parte dos fundos por longos períodos — nunca colocar tudo no mesmo lugar, seja ele qual for.`,
           },
         ],
@@ -109,6 +114,7 @@ const courses = [
             id: 'les-cs-2-1',
             title: 'Chave pública e chave privada',
             durationMin: 7,
+            diagramKey: 'key-pair-flow',
             content: `Toda carteira não-custodial se baseia em um par de chaves matemáticas relacionadas: uma chave pública e uma chave privada.\n\nA chave pública gera o seu endereço — pode ser compartilhada livremente, é o que você dá para alguém te enviar fundos, funciona como um número de conta. Não há problema nenhum em divulgar um endereço público.\n\nA chave privada é o que prova posse e autoriza movimentar os fundos daquele endereço — é matematicamente ligada à chave pública, mas não pode ser descoberta a partir dela (a relação funciona só num sentido). Qualquer pessoa que tenha acesso à sua chave privada pode assinar transações e mover seus fundos, exatamente como se fosse você — sem precisar de senha adicional, sem verificação de identidade, sem processo de recuperação.\n\nÉ por isso que toda a segurança de uma carteira não-custodial se resume, no fim das contas, a uma única pergunta: quem mais, além de você, teve contato com essa chave privada (ou com a seed phrase que a gera)?`,
           },
           {
@@ -184,12 +190,14 @@ const courses = [
             id: 'les-df-2-1',
             title: 'Lending e borrowing',
             durationMin: 8,
+            diagramKey: 'defi-lending-flow',
             content: `Protocolos de empréstimo (lending) em DeFi funcionam com uma lógica diferente de um banco tradicional: em vez de análise de crédito, eles exigem colateral — você deposita um ativo como garantia para poder tomar outro emprestado.\n\nNa prática, isso normalmente significa sobrecolateralização: para tomar emprestado o equivalente a $100, você pode precisar depositar $150 em garantia, justamente porque o protocolo precisa de uma margem de segurança contra a queda de preço do colateral.\n\nSe o valor do colateral cair abaixo de um limite definido pelo protocolo, ele é liquidado automaticamente — vendido no mercado para cobrir o empréstimo — sem aviso prévio, sem prazo de carência, e geralmente com uma multa (taxa de liquidação) sobre o valor liquidado. Isso pode acontecer em minutos, durante uma queda brusca de mercado, mesmo que a intenção original fosse manter a posição por muito mais tempo.`,
           },
           {
             id: 'les-df-2-2',
             title: 'DEXs e AMMs',
             durationMin: 8,
+            diagramKey: 'amm-swap',
             content: `Uma exchange centralizada (CEX) funciona com um livro de ofertas: compradores e vendedores publicam preços, e a exchange casa as ordens compatíveis. A maioria das exchanges descentralizadas (DEXs) usa um modelo diferente, chamado AMM (Automated Market Maker, ou "formador de mercado automatizado").\n\nEm um AMM, não existe um livro de ofertas — existe uma pool de liquidez: uma reserva com dois (ou mais) ativos, fornecida por outros usuários. Quando você troca um ativo por outro, você está negociando diretamente contra essa reserva, e o preço se ajusta automaticamente conforme a proporção entre os dois ativos muda a cada troca, seguindo uma fórmula matemática definida pelo protocolo.\n\nQuem fornece liquidez a essas pools ganha uma fração das taxas pagas por quem troca — mas assume, em troca, o risco de perda impermanente, abordado na próxima lição.`,
           },
           {
@@ -214,6 +222,7 @@ const courses = [
             id: 'les-df-3-2',
             title: 'Perda impermanente',
             durationMin: 7,
+            diagramKey: 'impermanent-loss',
             content: `Quem fornece liquidez a uma pool AMM está exposto a um efeito chamado perda impermanente: se o preço relativo entre os dois ativos da pool mudar muito depois que você forneceu liquidez, o valor que você consegue retirar pode ser menor do que se você simplesmente tivesse guardado os dois ativos separados, sem fornecer liquidez.\n\nIsso acontece porque o mecanismo do AMM rebalanceia automaticamente a proporção da pool conforme o preço muda — na prática, isso tende a fazer você vender o ativo que está subindo e comprar o que está caindo, o oposto do que a maioria das pessoas gostaria de fazer.\n\nO termo "impermanente" existe porque, se os preços voltarem à proporção original, a perda desaparece — mas se você retirar sua liquidez enquanto os preços estão divergentes, ela se torna uma perda real e definitiva. As taxas de negociação recebidas por fornecer liquidez podem compensar parte ou toda essa perda, dependendo do volume da pool — mas isso não é garantido, e precisa ser calculado, não presumido.`,
           },
           {
@@ -247,6 +256,7 @@ const courses = [
             id: 'les-nt-1-2',
             title: 'NFTs além da arte',
             durationMin: 7,
+            diagramKey: 'token-types',
             content: `NFT significa "token não-fungível" — cada unidade é única e não pode ser trocada 1-para-1 por outra unidade idêntica, ao contrário de uma moeda fungível. O boom de 2021-2022 associou o termo quase exclusivamente a arte colecionável digital, com preços que, em muitos casos, subiram por especulação e depois caíram mais de 90% — boa parte desses projetos hoje vale uma fração ínfima do pico.\n\nMas o conceito técnico de "posse única e verificável" tem aplicações que vão além disso: ingressos de eventos que impedem falsificação, itens de jogos que o jogador realmente possui (podendo vender ou transferir fora do jogo), certificados educacionais ou profissionais verificáveis publicamente, e registros de propriedade fracionada de ativos físicos.\n\nA lição honesta sobre o ciclo de 2021-2022 não é que "NFT é golpe" — é que a maior parte da demanda daquele período foi especulativa, comprando pela expectativa de revenda por um preço maior, não pelo uso real do ativo. Isso não é exclusivo de NFT; é o padrão clássico de qualquer bolha especulativa, em qualquer mercado, ao longo da história.`,
           },
         ],
@@ -259,6 +269,7 @@ const courses = [
             id: 'les-nt-2-1',
             title: 'Como funciona uma DAO',
             durationMin: 7,
+            diagramKey: 'dao-governance-flow',
             content: `Uma DAO (Organização Autônoma Descentralizada) é uma estrutura em que decisões coletivas — sobre um protocolo, um fundo, ou um projeto — são tomadas por voto de detentores de um token de governança, em vez de por uma diretoria tradicional.\n\nO fluxo típico é: alguém com tokens suficientes submete uma proposta (mudar um parâmetro do protocolo, alocar fundos de um tesouro, etc.); a comunidade vota durante um período determinado, geralmente com peso de voto proporcional à quantidade de tokens; se aprovada, a execução pode ser automática via contrato inteligente, ou depender de uma equipe designada para implementar.\n\nEssa estrutura tenta resolver um problema real: como coordenar decisões num grupo grande e distribuído globalmente, sem uma hierarquia formal — mas ela cria seus próprios desafios de coordenação, discutidos na próxima lição.`,
           },
           {
@@ -286,6 +297,7 @@ const courses = [
             id: 'les-sr-1-1',
             title: 'Lastreadas em moeda tradicional',
             durationMin: 6,
+            diagramKey: 'stablecoin-models',
             content: `A categoria mais simples de stablecoin promete manter reserva de moeda tradicional (dólar, geralmente) equivalente à quantidade de tokens emitidos: para cada unidade em circulação, a empresa emissora afirma manter um dólar (ou equivalente em títulos de curto prazo) guardado.\n\nO risco central aqui não é técnico, é de confiança institucional: você está confiando que a empresa emissora realmente mantém essa reserva integral, que ela é auditada de forma independente e transparente, e que ela vai honrar o resgate mesmo em cenário de estresse de mercado com muita gente pedindo resgate ao mesmo tempo.\n\nDiferentes emissores têm diferentes níveis de transparência sobre suas reservas — alguns publicam auditorias regulares de empresas independentes, outros historicamente foram mais opacos sobre a composição exata do que garantia seus tokens. Essa diferença de transparência é um fator de risco relevante e específico de cada stablecoin, não generalizável para a categoria toda.`,
           },
           {
@@ -355,6 +367,7 @@ const courses = [
             id: 'les-rg-1-4',
             title: 'Golpe do relacionamento (pig butchering)',
             durationMin: 7,
+            diagramKey: 'scam-anatomy',
             content: `Um dos golpes mais sofisticados e financeiramente devastadores dos últimos anos começa de forma completamente diferente dos outros: não com uma oferta de investimento, mas com um relacionamento — romântico ou de amizade — construído ao longo de semanas ou meses, geralmente iniciado em redes sociais, aplicativos de namoro ou por mensagem "enviada por engano".\n\nO termo em inglês, "pig butchering" (literalmente "abate de porco"), vem da metáfora cruel de "engordar o animal antes do abate": o golpista investe tempo genuíno construindo confiança emocional antes de, eventualmente, mencionar um investimento supostamente muito lucrativo que ele mesmo estaria usando, convidando a vítima a participar através de uma plataforma controlada pelo golpista.\n\nA plataforma frequentemente mostra ganhos falsos crescendo ao longo do tempo, incentivando a vítima a investir cada vez mais — até o momento em que ela tenta sacar e descobre que os fundos, e a pessoa do outro lado, desapareceram.\n\nO sinal de alerta mais confiável é o padrão em si: alguém que você conheceu recentemente online, com quem desenvolveu uma conexão pessoal forte e rápida, eventualmente sugerindo — direta ou indiretamente — que vocês invistam juntos numa plataforma específica que só ele ou ela indicou.`,
           },
         ],

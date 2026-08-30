@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { api } from '../api.js';
 import { Card } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
+import { DIAGRAM_OPTIONS, LessonDiagram } from '../diagrams/index.jsx';
 
 function Field({ label, className, ...props }) {
   return (
@@ -153,6 +154,22 @@ export function AdminCourseEditorPage() {
                       rows={6}
                       placeholder="Conteúdo (separe parágrafos com uma linha em branco)"
                     />
+                    <label className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+                      Diagrama ilustrativo
+                      <select
+                        defaultValue={lesson.diagramKey || ''}
+                        onChange={(e) => updateLessonField(mod.id, lesson.id, { diagramKey: e.target.value })}
+                        className="border border-border-soft rounded-md px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                      >
+                        <option value="">Nenhum</option>
+                        {DIAGRAM_OPTIONS.map((key) => <option key={key} value={key}>{key}</option>)}
+                      </select>
+                    </label>
+                    {lesson.diagramKey && (
+                      <div className="pointer-events-none opacity-90">
+                        <LessonDiagram diagramKey={lesson.diagramKey} />
+                      </div>
+                    )}
                   </div>
                 </details>
               ))}

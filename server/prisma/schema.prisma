@@ -51,6 +51,9 @@ model Lesson {
   content     String
   durationMin Int        @default(5)
   order       Int        @default(0)
+  // Chave de um diagrama ilustrativo (ver client/src/diagrams/index.jsx) exibido
+  // logo após o título da aula. Null = aula sem diagrama.
+  diagramKey  String?
   moduleId    String
   module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress    Progress[]

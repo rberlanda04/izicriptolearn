@@ -4,6 +4,7 @@ import { CheckCircle2, Circle, Clock, Lock, PlayCircle } from 'lucide-react';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { Badge } from '../components/ui/card.jsx';
+import { CourseCover } from '../components/CourseCover.jsx';
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
@@ -27,8 +28,15 @@ export function CourseDetailPage() {
 
   return (
     <div>
-      <section className="bg-ink text-on-dark-strong">
-        <div className="max-w-4xl mx-auto px-6 py-16">
+      <section className="relative bg-ink text-on-dark-strong overflow-hidden">
+        <CourseCover
+          course={course}
+          width={1200}
+          height={500}
+          className="absolute inset-0 w-full h-full object-cover opacity-40"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/85 to-ink/40" />
+        <div className="relative max-w-4xl mx-auto px-6 py-16">
           <div className="flex items-center gap-2">
             <Badge>{course.category}</Badge>
             <Badge tone="signal">{course.level}</Badge>

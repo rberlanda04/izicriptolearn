@@ -6,7 +6,7 @@ const { courses } = require('./seedData');
 // Cursos mais avançados ficam atrás do plano Pro, para demonstrar o paywall de verdade.
 const PRO_COURSE_IDS = new Set(['defi-na-pratica', 'stablecoins-e-risco']);
 
-async function main() {
+async function seed() {
     for (const [ci, course] of courses.entries()) {
         await prisma.course.upsert({
             where: { id: course.id },
@@ -27,6 +27,7 @@ async function main() {
                                 title: lesson.title,
                                 content: lesson.content,
                                 durationMin: lesson.durationMin,
+                                diagramKey: lesson.diagramKey || null,
                                 order: li,
                             })),
                         },
@@ -76,6 +77,10 @@ async function main() {
     }
 }
 
-main()
-    .catch((e) => { console.error(e); process.exit(1); })
-    .finally(() => prisma.$disconnect());
+if (require.main === module) {
+    seed()
+        .catch((e) => { console.error(e); process.exit(1); })
+        .finally(() => prisma.$disconnect());
+}
+
+module.exports = { seed };

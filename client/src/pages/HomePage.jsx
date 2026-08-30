@@ -4,6 +4,7 @@ import { ArrowRight, GraduationCap, ShieldAlert } from 'lucide-react';
 import { api } from '../api.js';
 import { Card, Badge } from '../components/ui/card.jsx';
 import { Button } from '../components/ui/button.jsx';
+import { CourseCover } from '../components/CourseCover.jsx';
 
 export function HomePage() {
   const [courses, setCourses] = useState([]);
@@ -55,11 +56,14 @@ export function HomePage() {
         <div className="grid md:grid-cols-3 gap-5">
           {courses.slice(0, 3).map((c) => (
             <Link key={c.id} to={`/cursos/${c.id}`}>
-              <Card className="p-6 h-full hover:border-accent transition-colors">
-                <Badge>{c.category}</Badge>
-                <h3 className="text-lg font-bold mt-3">{c.title}</h3>
-                <p className="text-sm text-muted mt-2">{c.summary}</p>
-                <div className="text-xs text-muted mt-4 font-[var(--font-mono)]">{c.moduleCount} módulos · {c.lessonCount} aulas</div>
+              <Card className="h-full overflow-hidden hover:border-accent transition-colors">
+                <CourseCover course={c} className="w-full h-36 object-cover" />
+                <div className="p-6">
+                  <Badge>{c.category}</Badge>
+                  <h3 className="text-lg font-bold mt-3">{c.title}</h3>
+                  <p className="text-sm text-muted mt-2">{c.summary}</p>
+                  <div className="text-xs text-muted mt-4 font-[var(--font-mono)]">{c.moduleCount} módulos · {c.lessonCount} aulas</div>
+                </div>
               </Card>
             </Link>
           ))}

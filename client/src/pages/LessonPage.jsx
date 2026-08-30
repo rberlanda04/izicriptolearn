@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Circle, Clock, Lock } from 'lucide
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { cn } from '../lib/utils.js';
+import { LessonDiagram } from '../diagrams/index.jsx';
 
 export function LessonPage() {
   const { courseId, lessonId } = useParams();
@@ -105,6 +106,8 @@ export function LessonPage() {
             </button>
           )}
         </div>
+
+        {lesson.diagramKey && <LessonDiagram diagramKey={lesson.diagramKey} />}
 
         <div className="lesson-content mt-8 text-[15.5px] text-text">
           {lesson.content?.split('\n\n').map((p, i) => <p key={i}>{p}</p>)}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, Badge } from '../components/ui/card.jsx';
 import { api } from '../api.js';
 import { cn } from '../lib/utils.js';
+import { CourseCover } from '../components/CourseCover.jsx';
 
 const LEVEL_LABEL = { iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' };
 
@@ -46,14 +47,17 @@ export function CatalogPage() {
         <div className="grid md:grid-cols-3 gap-5 mt-8">
           {filtered.map((c) => (
             <Link key={c.id} to={`/cursos/${c.id}`}>
-              <Card className="p-6 h-full hover:border-accent transition-colors flex flex-col">
-                <div className="flex items-center gap-2">
-                  <Badge>{c.category}</Badge>
-                  <Badge tone="signal">{LEVEL_LABEL[c.level]}</Badge>
+              <Card className="h-full overflow-hidden hover:border-accent transition-colors flex flex-col">
+                <CourseCover course={c} className="w-full h-36 object-cover" />
+                <div className="p-6 flex flex-col flex-1">
+                  <div className="flex items-center gap-2">
+                    <Badge>{c.category}</Badge>
+                    <Badge tone="signal">{LEVEL_LABEL[c.level]}</Badge>
+                  </div>
+                  <h3 className="text-lg font-bold mt-3">{c.title}</h3>
+                  <p className="text-sm text-muted mt-2 flex-1">{c.summary}</p>
+                  <div className="text-xs text-muted mt-4 font-[var(--font-mono)]">{c.moduleCount} módulos · {c.lessonCount} aulas</div>
                 </div>
-                <h3 className="text-lg font-bold mt-3">{c.title}</h3>
-                <p className="text-sm text-muted mt-2 flex-1">{c.summary}</p>
-                <div className="text-xs text-muted mt-4 font-[var(--font-mono)]">{c.moduleCount} módulos · {c.lessonCount} aulas</div>
               </Card>
             </Link>
           ))}

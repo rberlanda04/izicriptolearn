@@ -1,4 +1,8 @@
-const BASE = '/api';
+// Em dev, o Vite faz proxy de /api para o backend local (ver vite.config.js).
+// Em produção no Firebase Hosting não existe esse proxy — o Hosting só serve arquivos
+// estáticos, não roda o Express — então a URL completa do backend precisa ser embutida
+// no build via VITE_API_BASE_URL (ex: https://izicripto-api.onrender.com).
+const BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api';
 
 function getToken() {
   return localStorage.getItem('izicripto_token');

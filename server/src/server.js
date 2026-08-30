@@ -192,11 +192,12 @@ app.put('/api/courses/:id/modules/:moduleId/lessons/:lessonId', authenticate, re
     const lesson = await prisma.lesson.findUnique({ where: { id: req.params.lessonId } });
     if (!lesson || lesson.moduleId !== req.params.moduleId) return res.status(404).json({ error: 'Aula não encontrada.' });
 
-    const { title, content, durationMin } = req.body || {};
+    const { title, content, durationMin, diagramKey } = req.body || {};
     const data = {};
     if (title !== undefined) data.title = title;
     if (content !== undefined) data.content = content;
     if (durationMin !== undefined) data.durationMin = Number(durationMin);
+    if (diagramKey !== undefined) data.diagramKey = diagramKey || null;
     await prisma.lesson.update({ where: { id: req.params.lessonId }, data });
     res.json(await getFullCourse(req.params.id));
 }));
@@ -276,7 +277,29 @@ process.on('unhandledRejection', (err) => {
 });
 
 const PORT = process.env.PORT || 4100;
-app.listen(PORT, () => {
-    console.log(`iziCripto Platform API rodando em http://localhost:${PORT}`);
-    console.log(`Billing (Stripe) configurado: ${isBillingConfigured()}`);
+
+// Auto-seed no boot: em hosts de plano gratuito (ex: Render free tier) o disco não é
+// garantidamente persistente entre reinícios — a instância pode "dormir" por inatividade
+// e voltar com um banco vazio. Isso recria o catálogo de cursos e o admin automaticamente
+// sempre que faltarem, sem depender de rodar `npm run seed` manualmente toda vez.
+// Não resolve a perda de contas/progresso criados por usuários reais nesse cenário —
+// para isso, migrar DATABASE_URL para um Postgres hospedado (ver plano de escalabilidade).
+async function ensureSeeded() {
+    try {
+        const courseCount = await prisma.course.count();
+        if (courseCount === 0) {
+            console.log('Banco vazio — aplicando seed inicial (cursos + admin)...');
+            const { seed } = require('./seedPrisma');
+            await seed();
+        }
+    } catch (err) {
+        console.error('[SEED] Falha ao verificar/aplicar seed inicial:', err.message);
+    }
+}
+
+ensureSeeded().finally(() => {
+    app.listen(PORT, () => {
+        console.log(`iziCripto Platform API rodando em http://localhost:${PORT}`);
+        console.log(`Billing (Stripe) configurado: ${isBillingConfigured()}`);
+    });
 });
