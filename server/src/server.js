@@ -97,9 +97,13 @@ function publicUser(user) {
     return { id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan };
 }
 
+// Ter conta é o requisito mínimo pra ler qualquer aula, mesmo em curso gratuito — o
+// catálogo continua público (título/resumo), só o conteúdo em si exige login. Cursos Pro
+// seguem exigindo, além disso, plano pro (ou ser admin).
 function isUnlocked(course, user) {
+    if (!user) return false;
     if (!course.isPro) return true;
-    return user?.role === 'admin' || user?.plan === 'pro';
+    return user.role === 'admin' || user.plan === 'pro';
 }
 
 // ---------- Auth ----------

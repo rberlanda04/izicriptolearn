@@ -68,8 +68,12 @@ export function CourseDetailPage() {
 
           {!course.unlocked ? (
             <div className="inline-flex items-center gap-2 mt-8 bg-white/10 px-6 py-3 rounded-full font-semibold text-sm">
-              <Lock size={16} /> Curso Pro —
-              <Link to="/precos" className="underline underline-offset-2">ver planos</Link>
+              <Lock size={16} />
+              {!user ? (
+                <>Crie uma conta grátis — <Link to="/registrar" className="underline underline-offset-2">cadastre-se</Link></>
+              ) : (
+                <>Curso Pro — <Link to="/precos" className="underline underline-offset-2">ver planos</Link></>
+              )}
             </div>
           ) : firstLesson && (
             <Link

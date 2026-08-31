@@ -53,9 +53,19 @@ export function LessonPage() {
     return (
       <div className="max-w-md mx-auto px-6 py-24 text-center">
         <Lock size={28} className="mx-auto text-muted mb-4" />
-        <h1 className="text-xl font-bold">Este é um curso Pro</h1>
-        <p className="text-muted text-sm mt-2">Assine o plano Pro para acessar esta aula.</p>
-        <Link to="/precos" className="inline-block mt-6 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm">Ver planos</Link>
+        {!user ? (
+          <>
+            <h1 className="text-xl font-bold">Crie uma conta gratuita para acessar</h1>
+            <p className="text-muted text-sm mt-2">O conteúdo das aulas é liberado só para quem tem login — leva menos de um minuto e não custa nada.</p>
+            <Link to="/registrar" className="inline-block mt-6 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm">Criar conta grátis</Link>
+          </>
+        ) : (
+          <>
+            <h1 className="text-xl font-bold">Este é um curso Pro</h1>
+            <p className="text-muted text-sm mt-2">Assine o plano Pro para acessar esta aula.</p>
+            <Link to="/precos" className="inline-block mt-6 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm">Ver planos</Link>
+          </>
+        )}
       </div>
     );
   }
@@ -199,7 +209,7 @@ export function LessonPage() {
 
           <LessonQuiz quiz={lesson.quiz} key={lesson.id} />
 
-          {lesson.id === 'les-tr-0-1' && (
+          {lesson.title === 'Pratique no Simulador de Trade (antes de arriscar dinheiro de verdade)' && (
             <Link
               to="/simulador"
               className="inline-flex items-center gap-2 mt-4 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm hover:bg-accent/90 shadow-md"
