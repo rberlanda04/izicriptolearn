@@ -7,8 +7,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: DATABASE_URL
-        value: file:./dev.db
+      - key: FIREBASE_SERVICE_ACCOUNT_BASE64
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: CLIENT_URL

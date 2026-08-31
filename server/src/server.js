@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { WebSocketServer } = require('ws');
-const { prisma } = require('./db');
+const { db, FieldValue } = require('./firestore');
 const { hashPassword, verifyPassword, signToken, verifyToken, authenticate, optionalAuthenticate, requireAdmin } = require('./auth');
 const { isBillingConfigured, createCheckoutSession, constructWebhookEvent } = require('./billing');
 const { SimulatorSessionManager } = require('./simulator/sessionManager');
@@ -64,7 +64,7 @@ app.use('/api', generalLimiter);
 // compartilhados entre todas as sessões, só a contabilidade de cada usuário é isolada.
 const simulatorSessions = new SimulatorSessionManager({ ...defaultSimulatorConfig });
 
-// Envolve toda rota async: sem isso, um erro (ex: Prisma rejeitando uma query) vira uma
+// Envolve toda rota async: sem isso, um erro (ex: Firestore rejeitando uma escrita) vira uma
 // promise rejeitada sem handler e derruba o processo Node inteiro — uma única requisição
 // mal formada tirava a API do ar para todo mundo. Com isso, o erro vai para o middleware
 // de erro abaixo e vira uma resposta 500 comum, sem matar o servidor.
@@ -85,7 +85,7 @@ app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), wrap
         const session = event.data.object;
         const userId = session.client_reference_id;
         if (userId) {
-            await prisma.user.update({ where: { id: userId }, data: { plan: 'pro' } }).catch(() => {});
+            await db.collection('users').doc(userId).update({ plan: 'pro' }).catch(() => {});
         }
     }
     res.json({ received: true });
@@ -95,6 +95,36 @@ app.use(express.json({ limit: '2mb' }));
 
 function publicUser(user) {
     return { id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan };
+}
+
+async function findUserByEmail(email) {
+    const snap = await db.collection('users').where('email', '==', email).limit(1).get();
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
+
+async function findUserById(id) {
+    const doc = await db.collection('users').doc(id).get();
+    if (!doc.exists) return null;
+    return { id: doc.id, ...doc.data() };
+}
+
+async function listCourses() {
+    const snap = await db.collection('courses').orderBy('order', 'asc').get();
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Cada curso é UM documento Firestore com módulos/aulas embutidos como array aninhado
+// (ver seedFirestore.js) — sem isso ser um único doc, listar um curso completo exigiria
+// várias consultas de subcoleção em vez de uma leitura só.
+async function getFullCourse(id) {
+    const doc = await db.collection('courses').doc(id).get();
+    if (!doc.exists) return null;
+    const modules = (doc.data().modules || []).slice().sort((a, b) => a.order - b.order).map((m) => ({
+        ...m,
+        lessons: (m.lessons || []).slice().sort((a, b) => a.order - b.order),
+    }));
+    return { id: doc.id, ...doc.data(), modules };
 }
 
 // Ter conta é o requisito mínimo pra ler qualquer aula, mesmo em curso gratuito — o
@@ -113,18 +143,21 @@ app.post('/api/auth/register', authLimiter, wrap(async (req, res) => {
     if (!email || !password || password.length < 6) {
         return res.status(400).json({ error: 'E-mail e senha (mín. 6 caracteres) são obrigatórios.' });
     }
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await findUserByEmail(email);
     if (existing) return res.status(409).json({ error: 'Já existe uma conta com este e-mail.' });
 
-    const user = await prisma.user.create({
-        data: { email, passwordHash: await hashPassword(password), name: name || null },
-    });
+    const data = {
+        email, passwordHash: await hashPassword(password), name: name || null,
+        role: 'student', plan: 'free', createdAt: FieldValue.serverTimestamp(),
+    };
+    const ref = await db.collection('users').add(data);
+    const user = { id: ref.id, ...data };
     res.status(201).json({ token: signToken(user), user: publicUser(user) });
 }));
 
 app.post('/api/auth/login', authLimiter, wrap(async (req, res) => {
     const { email, password } = req.body || {};
-    const user = email ? await prisma.user.findUnique({ where: { email } }) : null;
+    const user = email ? await findUserByEmail(email) : null;
     if (!user || !(await verifyPassword(password || '', user.passwordHash))) {
         return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
@@ -132,7 +165,7 @@ app.post('/api/auth/login', authLimiter, wrap(async (req, res) => {
 }));
 
 app.get('/api/auth/me', authenticate, wrap(async (req, res) => {
-    const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+    const user = await findUserById(req.user.sub);
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
     res.json(publicUser(user));
 }));
@@ -140,24 +173,17 @@ app.get('/api/auth/me', authenticate, wrap(async (req, res) => {
 // ---------- Courses ----------
 
 app.get('/api/courses', optionalAuthenticate, wrap(async (req, res) => {
-    const courses = await prisma.course.findMany({
-        orderBy: { order: 'asc' },
-        include: { modules: { include: { lessons: true } } },
-    });
+    const courses = await listCourses();
     res.json(courses.map((c) => ({
         id: c.id, title: c.title, summary: c.summary, level: c.level, category: c.category,
         isPro: c.isPro, unlocked: isUnlocked(c, req.user),
-        moduleCount: c.modules.length,
-        lessonCount: c.modules.reduce((s, m) => s + m.lessons.length, 0),
-        updatedAt: c.updatedAt,
+        moduleCount: (c.modules || []).length,
+        lessonCount: (c.modules || []).reduce((s, m) => s + (m.lessons || []).length, 0),
     })));
 }));
 
 app.get('/api/courses/:id', optionalAuthenticate, wrap(async (req, res) => {
-    const course = await prisma.course.findUnique({
-        where: { id: req.params.id },
-        include: { modules: { orderBy: { order: 'asc' }, include: { lessons: { orderBy: { order: 'asc' } } } } },
-    });
+    const course = await getFullCourse(req.params.id);
     if (!course) return res.status(404).json({ error: 'Curso não encontrado.' });
 
     const unlocked = isUnlocked(course, req.user);
@@ -172,64 +198,95 @@ app.get('/api/courses/:id', optionalAuthenticate, wrap(async (req, res) => {
     res.json(payload);
 }));
 
+function slugify(title) {
+    return title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function randomId(prefix) {
+    return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
 app.post('/api/courses', authenticate, requireAdmin, wrap(async (req, res) => {
     const { title, summary, level, category, isPro } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Título é obrigatório.' });
 
-    const base = title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const base = slugify(title);
     let id = base, n = 2;
-    while (await prisma.course.findUnique({ where: { id } })) { id = `${base}-${n}`; n++; }
+    while ((await db.collection('courses').doc(id).get()).exists) { id = `${base}-${n}`; n++; }
 
-    const count = await prisma.course.count();
-    const course = await prisma.course.create({
-        data: { id, title: title.trim(), summary: summary || '', level: level || 'iniciante', category: category || 'Geral', isPro: Boolean(isPro), order: count },
-    });
-    res.status(201).json(course);
+    const countSnap = await db.collection('courses').count().get();
+    const data = {
+        title: title.trim(), summary: summary || '', level: level || 'iniciante',
+        category: category || 'Geral', isPro: Boolean(isPro), order: countSnap.data().count, modules: [],
+    };
+    await db.collection('courses').doc(id).set(data);
+    res.status(201).json({ id, ...data });
 }));
 
 app.put('/api/courses/:id', authenticate, requireAdmin, wrap(async (req, res) => {
-    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
-    if (!course) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
 
     const { title, summary, level, category, isPro } = req.body || {};
-    const updated = await prisma.course.update({
-        where: { id: req.params.id },
-        data: { title, summary, level, category, isPro },
-    });
-    res.json(updated);
+    const data = {};
+    if (title !== undefined) data.title = title;
+    if (summary !== undefined) data.summary = summary;
+    if (level !== undefined) data.level = level;
+    if (category !== undefined) data.category = category;
+    if (isPro !== undefined) data.isPro = Boolean(isPro);
+    await ref.update(data);
+    const updated = await ref.get();
+    res.json({ id: updated.id, ...updated.data() });
 }));
 
 app.delete('/api/courses/:id', authenticate, requireAdmin, wrap(async (req, res) => {
-    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
-    if (!course) return res.status(404).json({ error: 'Curso não encontrado.' });
-    await prisma.course.delete({ where: { id: req.params.id } });
+    const ref = db.collection('courses').doc(req.params.id);
+    if (!(await ref.get()).exists) return res.status(404).json({ error: 'Curso não encontrado.' });
+    await ref.delete();
     res.status(204).end();
 }));
 
 // ---------- Modules ----------
+// Módulos/aulas vivem como array aninhado dentro do próprio documento do curso (ver
+// seedFirestore.js) — toda mutação segue o mesmo padrão ler-modificar-escrever o doc inteiro.
 
 app.post('/api/courses/:id/modules', authenticate, requireAdmin, wrap(async (req, res) => {
     const { title } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Título do módulo é obrigatório.' });
-    const course = await prisma.course.findUnique({ where: { id: req.params.id } });
-    if (!course) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
 
-    const count = await prisma.module.count({ where: { courseId: req.params.id } });
-    await prisma.module.create({ data: { title: title.trim(), courseId: req.params.id, order: count } });
+    const modules = doc.data().modules || [];
+    const newModule = { id: randomId('mod'), title: title.trim(), order: modules.length, lessons: [] };
+    await ref.update({ modules: [...modules, newModule] });
     res.status(201).json(await getFullCourse(req.params.id));
 }));
 
 app.put('/api/courses/:id/modules/:moduleId', authenticate, requireAdmin, wrap(async (req, res) => {
-    const mod = await prisma.module.findUnique({ where: { id: req.params.moduleId } });
-    if (!mod || mod.courseId !== req.params.id) return res.status(404).json({ error: 'Módulo não encontrado.' });
-    await prisma.module.update({ where: { id: req.params.moduleId }, data: { title: req.body?.title } });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const modules = doc.data().modules || [];
+    const idx = modules.findIndex((m) => m.id === req.params.moduleId);
+    if (idx === -1) return res.status(404).json({ error: 'Módulo não encontrado.' });
+
+    modules[idx] = { ...modules[idx], title: req.body?.title ?? modules[idx].title };
+    await ref.update({ modules });
     res.json(await getFullCourse(req.params.id));
 }));
 
 app.delete('/api/courses/:id/modules/:moduleId', authenticate, requireAdmin, wrap(async (req, res) => {
-    const mod = await prisma.module.findUnique({ where: { id: req.params.moduleId } });
-    if (!mod || mod.courseId !== req.params.id) return res.status(404).json({ error: 'Módulo não encontrado.' });
-    await prisma.module.delete({ where: { id: req.params.moduleId } });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const modules = doc.data().modules || [];
+    const idx = modules.findIndex((m) => m.id === req.params.moduleId);
+    if (idx === -1) return res.status(404).json({ error: 'Módulo não encontrado.' });
+
+    modules.splice(idx, 1);
+    await ref.update({ modules });
     res.json(await getFullCourse(req.params.id));
 }));
 
@@ -238,67 +295,89 @@ app.delete('/api/courses/:id/modules/:moduleId', authenticate, requireAdmin, wra
 app.post('/api/courses/:id/modules/:moduleId/lessons', authenticate, requireAdmin, wrap(async (req, res) => {
     const { title, content, durationMin } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Título da aula é obrigatório.' });
-    const mod = await prisma.module.findUnique({ where: { id: req.params.moduleId } });
-    if (!mod || mod.courseId !== req.params.id) return res.status(404).json({ error: 'Módulo não encontrado.' });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const modules = doc.data().modules || [];
+    const modIdx = modules.findIndex((m) => m.id === req.params.moduleId);
+    if (modIdx === -1) return res.status(404).json({ error: 'Módulo não encontrado.' });
 
-    const count = await prisma.lesson.count({ where: { moduleId: req.params.moduleId } });
-    await prisma.lesson.create({
-        data: { title: title.trim(), content: content || '', durationMin: Number(durationMin) || 5, moduleId: req.params.moduleId, order: count },
-    });
+    const lessons = modules[modIdx].lessons || [];
+    const newLesson = {
+        id: randomId('les'), title: title.trim(), content: content || '',
+        durationMin: Number(durationMin) || 5, order: lessons.length, diagramKey: null, quiz: null,
+    };
+    modules[modIdx] = { ...modules[modIdx], lessons: [...lessons, newLesson] };
+    await ref.update({ modules });
     res.status(201).json(await getFullCourse(req.params.id));
 }));
 
 app.put('/api/courses/:id/modules/:moduleId/lessons/:lessonId', authenticate, requireAdmin, wrap(async (req, res) => {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.lessonId } });
-    if (!lesson || lesson.moduleId !== req.params.moduleId) return res.status(404).json({ error: 'Aula não encontrada.' });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const modules = doc.data().modules || [];
+    const modIdx = modules.findIndex((m) => m.id === req.params.moduleId);
+    if (modIdx === -1) return res.status(404).json({ error: 'Módulo não encontrado.' });
+    const lessons = modules[modIdx].lessons || [];
+    const lesIdx = lessons.findIndex((l) => l.id === req.params.lessonId);
+    if (lesIdx === -1) return res.status(404).json({ error: 'Aula não encontrada.' });
 
     const { title, content, durationMin, diagramKey } = req.body || {};
-    const data = {};
-    if (title !== undefined) data.title = title;
-    if (content !== undefined) data.content = content;
-    if (durationMin !== undefined) data.durationMin = Number(durationMin);
-    if (diagramKey !== undefined) data.diagramKey = diagramKey || null;
-    await prisma.lesson.update({ where: { id: req.params.lessonId }, data });
+    const current = lessons[lesIdx];
+    lessons[lesIdx] = {
+        ...current,
+        title: title !== undefined ? title : current.title,
+        content: content !== undefined ? content : current.content,
+        durationMin: durationMin !== undefined ? Number(durationMin) : current.durationMin,
+        diagramKey: diagramKey !== undefined ? (diagramKey || null) : current.diagramKey,
+    };
+    modules[modIdx] = { ...modules[modIdx], lessons };
+    await ref.update({ modules });
     res.json(await getFullCourse(req.params.id));
 }));
 
 app.delete('/api/courses/:id/modules/:moduleId/lessons/:lessonId', authenticate, requireAdmin, wrap(async (req, res) => {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.lessonId } });
-    if (!lesson || lesson.moduleId !== req.params.moduleId) return res.status(404).json({ error: 'Aula não encontrada.' });
-    await prisma.lesson.delete({ where: { id: req.params.lessonId } });
+    const ref = db.collection('courses').doc(req.params.id);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).json({ error: 'Curso não encontrado.' });
+    const modules = doc.data().modules || [];
+    const modIdx = modules.findIndex((m) => m.id === req.params.moduleId);
+    if (modIdx === -1) return res.status(404).json({ error: 'Módulo não encontrado.' });
+    const lessons = modules[modIdx].lessons || [];
+    const lesIdx = lessons.findIndex((l) => l.id === req.params.lessonId);
+    if (lesIdx === -1) return res.status(404).json({ error: 'Aula não encontrada.' });
+
+    lessons.splice(lesIdx, 1);
+    modules[modIdx] = { ...modules[modIdx], lessons };
+    await ref.update({ modules });
     res.json(await getFullCourse(req.params.id));
 }));
-
-async function getFullCourse(id) {
-    return prisma.course.findUnique({
-        where: { id },
-        include: { modules: { orderBy: { order: 'asc' }, include: { lessons: { orderBy: { order: 'asc' } } } } },
-    });
-}
 
 // ---------- Progress ----------
 
 app.get('/api/progress', authenticate, wrap(async (req, res) => {
-    const rows = await prisma.progress.findMany({ where: { userId: req.user.sub } });
-    res.json(rows.map((r) => r.lessonId));
+    const snap = await db.collection('users').doc(req.user.sub).collection('progress').get();
+    res.json(snap.docs.map((d) => d.id));
 }));
 
 app.post('/api/progress/:lessonId', authenticate, wrap(async (req, res) => {
-    const lesson = await prisma.lesson.findUnique({ where: { id: req.params.lessonId } });
-    if (!lesson) return res.status(404).json({ error: 'Aula não encontrada.' });
+    // Confirma que a aula existe de verdade em algum curso antes de marcar progresso —
+    // evita registrar progresso pra um id inventado/errado.
+    const coursesSnap = await db.collection('courses').get();
+    const exists = coursesSnap.docs.some((d) =>
+        (d.data().modules || []).some((m) => (m.lessons || []).some((l) => l.id === req.params.lessonId))
+    );
+    if (!exists) return res.status(404).json({ error: 'Aula não encontrada.' });
 
-    await prisma.progress.upsert({
-        where: { userId_lessonId: { userId: req.user.sub, lessonId: req.params.lessonId } },
-        create: { userId: req.user.sub, lessonId: req.params.lessonId },
-        update: {},
+    await db.collection('users').doc(req.user.sub).collection('progress').doc(req.params.lessonId).set({
+        completedAt: FieldValue.serverTimestamp(),
     });
     res.status(204).end();
 }));
 
 app.delete('/api/progress/:lessonId', authenticate, wrap(async (req, res) => {
-    await prisma.progress.delete({
-        where: { userId_lessonId: { userId: req.user.sub, lessonId: req.params.lessonId } },
-    }).catch(() => {});
+    await db.collection('users').doc(req.user.sub).collection('progress').doc(req.params.lessonId).delete().catch(() => {});
     res.status(204).end();
 }));
 
@@ -308,20 +387,19 @@ app.delete('/api/progress/:lessonId', authenticate, wrap(async (req, res) => {
 
 app.get('/api/journey', authenticate, wrap(async (req, res) => {
     const userId = req.user.sub;
-    const [progressRows, courses] = await Promise.all([
-        prisma.progress.findMany({ where: { userId } }),
-        prisma.course.findMany({
-            orderBy: { order: 'asc' },
-            include: { modules: { orderBy: { order: 'asc' }, include: { lessons: { orderBy: { order: 'asc' } } } } },
-        }),
+    const [progressSnap, courses] = await Promise.all([
+        db.collection('users').doc(userId).collection('progress').get(),
+        listCourses(),
     ]);
 
-    const completedIds = new Set(progressRows.map((r) => r.lessonId));
-    const totalLessons = courses.reduce((s, c) => s + c.modules.reduce((s2, m) => s2 + m.lessons.length, 0), 0);
+    const completedIds = new Set(progressSnap.docs.map((d) => d.id));
+    const totalLessons = courses.reduce((s, c) => s + (c.modules || []).reduce((s2, m) => s2 + (m.lessons || []).length, 0), 0);
 
     // Sequência (streak): dias de calendário (UTC) consecutivos, terminando hoje ou ontem,
     // com pelo menos uma aula concluída em cada um.
-    const daysWithActivity = new Set(progressRows.map((r) => r.completedAt.toISOString().slice(0, 10)));
+    const daysWithActivity = new Set(
+        progressSnap.docs.map((d) => d.data().completedAt).filter(Boolean).map((ts) => ts.toDate().toISOString().slice(0, 10))
+    );
     let streakDays = 0;
     const cursor = new Date();
     if (!daysWithActivity.has(cursor.toISOString().slice(0, 10))) cursor.setUTCDate(cursor.getUTCDate() - 1);
@@ -333,13 +411,14 @@ app.get('/api/journey', authenticate, wrap(async (req, res) => {
     let nextLesson = null;
     const courseProgress = [];
     for (const course of courses) {
-        const lessonIds = course.modules.flatMap((m) => m.lessons.map((l) => l.id));
+        const modules = (course.modules || []).slice().sort((a, b) => a.order - b.order);
+        const lessonIds = modules.flatMap((m) => (m.lessons || []).map((l) => l.id));
         const completed = lessonIds.filter((id) => completedIds.has(id)).length;
         courseProgress.push({ id: course.id, title: course.title, isPro: course.isPro, completed, total: lessonIds.length });
 
         if (nextLesson || !isUnlocked(course, req.user)) continue;
-        for (const mod of course.modules) {
-            const lesson = mod.lessons.find((l) => !completedIds.has(l.id));
+        for (const mod of modules) {
+            const lesson = (mod.lessons || []).slice().sort((a, b) => a.order - b.order).find((l) => !completedIds.has(l.id));
             if (lesson) { nextLesson = { courseId: course.id, courseTitle: course.title, lessonId: lesson.id, lessonTitle: lesson.title }; break; }
         }
     }
@@ -362,7 +441,7 @@ app.get('/api/billing/status', (req, res) => {
 
 app.post('/api/billing/checkout', authenticate, wrap(async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({ where: { id: req.user.sub } });
+        const user = await findUserById(req.user.sub);
         const session = await createCheckoutSession(user);
         res.json({ url: session.url });
     } catch (err) {
@@ -497,7 +576,7 @@ app.post('/api/simulator/toggle-bot', authenticate, wrap(async (req, res) => {
 }));
 
 // ---------- 404 + tratamento de erro global ----------
-// Sem isso, qualquer erro não previsto (Prisma, bug de lógica, etc.) derruba o
+// Sem isso, qualquer erro não previsto (Firestore, bug de lógica, etc.) derruba o
 // processo Node inteiro em vez de responder 500 só para quem fez aquela requisição.
 
 app.use((req, res) => {
@@ -525,7 +604,7 @@ const PORT = process.env.PORT || 4100;
 // apaga módulos/aulas de cursos já existentes nem contas/progresso de usuários reais.
 async function ensureSeeded() {
     try {
-        const { seed } = require('./seedPrisma');
+        const { seed } = require('./seedFirestore');
         await seed();
     } catch (err) {
         console.error('[SEED] Falha ao verificar/aplicar seed inicial:', err.message);

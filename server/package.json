@@ -5,25 +5,21 @@
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
-    "postinstall": "prisma generate",
-    "start": "prisma db push --skip-generate --accept-data-loss && node src/server.js",
+    "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "seed": "node src/seedPrisma.js",
-    "prisma:push": "prisma db push",
-    "prisma:studio": "prisma studio"
+    "seed": "node src/seedFirestore.js"
   },
   "license": "MIT",
   "dependencies": {
-    "@prisma/client": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "ccxt": "^4.4.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "express-rate-limit": "^8.7.0",
+    "firebase-admin": "^14.3.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
-    "prisma": "^6.0.0",
     "stripe": "^17.0.0",
     "technicalindicators": "^3.1.0",
     "ws": "^8.18.0"
