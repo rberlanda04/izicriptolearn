@@ -22,7 +22,7 @@ export function EditStopsModal({ isOpen, onClose, position, currentPrice, onUpda
     setError(null);
 
     try {
-      await simulatorApi.updateStops(position.symbol, {
+      await simulatorApi.updateStops(position.symbol, position.id, {
         takeProfit: tp ? Number(tp) : null,
         stopLoss: sl ? Number(sl) : null,
         isTrailingStop: trailing,

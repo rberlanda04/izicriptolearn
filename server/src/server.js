@@ -526,10 +526,10 @@ app.post('/api/simulator/trade/open', authenticate, wrap(async (req, res) => {
 
 app.post('/api/simulator/trade/close', authenticate, wrap(async (req, res) => {
     const sim = simulatorSessions.getOrCreate(req.user.sub);
-    const { symbol, reason } = req.body || {};
+    const { symbol, positionId, reason } = req.body || {};
     if (!symbol) return res.status(400).json({ error: 'Símbolo é obrigatório.' });
     try {
-        const trade = sim.closePositionManual(symbol, reason || 'MANUAL_CLOSE');
+        const trade = sim.closePositionManual(symbol, positionId, reason || 'MANUAL_CLOSE');
         res.json({ ok: true, trade });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -548,10 +548,10 @@ app.post('/api/simulator/trade/close-all', authenticate, wrap(async (req, res) =
 
 app.post('/api/simulator/trade/update-stops', authenticate, wrap(async (req, res) => {
     const sim = simulatorSessions.getOrCreate(req.user.sub);
-    const { symbol, takeProfit, stopLoss, isTrailingStop } = req.body || {};
+    const { symbol, positionId, takeProfit, stopLoss, isTrailingStop } = req.body || {};
     if (!symbol) return res.status(400).json({ error: 'Símbolo é obrigatório.' });
     try {
-        const position = sim.updateStopsManual(symbol, { takeProfit, stopLoss, isTrailingStop });
+        const position = sim.updateStopsManual(symbol, positionId, { takeProfit, stopLoss, isTrailingStop });
         res.json({ ok: true, position });
     } catch (err) {
         res.status(400).json({ error: err.message });

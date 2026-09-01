@@ -148,16 +148,16 @@ class Simulator extends EventEmitter {
         return this.engine.openManualPosition(params);
     }
 
-    closePositionManual(symbol, reason) {
-        return this.engine.closePositionManual(symbol, reason);
+    closePositionManual(symbol, positionId, reason) {
+        return this.engine.closePositionManual(symbol, positionId, reason);
     }
 
     closeAllPositionsManual(reason) {
         return this.engine.closeAllPositionsManual(reason);
     }
 
-    updateStopsManual(symbol, stops) {
-        return this.engine.updateStopsManual(symbol, stops);
+    updateStopsManual(symbol, positionId, stops) {
+        return this.engine.updateStopsManual(symbol, positionId, stops);
     }
 
     resetAccount(initialCapital) {

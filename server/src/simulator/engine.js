@@ -21,6 +21,10 @@ const { RSI, MACD, BollingerBands, ATR, EMA } = require('technicalindicators');
 // mesmo depois do log de exibição descartar trades antigos.
 const TRADES_LOG_CAP = 1000;
 
+function randomPositionId() {
+    return `pos-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
 class TradingEngine extends EventEmitter {
     constructor(config) {
         super();
@@ -28,7 +32,10 @@ class TradingEngine extends EventEmitter {
         this.balance = config.capital;
         this.dayStartBalance = config.capital;
         this.dayKey = null;
-        this.positions = {}; // symbol -> position
+        // symbol -> Position[] — mais de uma posição pode ficar aberta no mesmo par ao
+        // mesmo tempo (ex: fazer média de preço, ou um hedge long+short manual). O robô
+        // automático continua conservador e só abre uma por símbolo (ver tryEnter).
+        this.positions = {};
         this.trades = []; // últimos TRADES_LOG_CAP trades, para exibição — não usar para estatísticas agregadas
         this.cooldowns = {}; // symbol -> timestamp until which entries are blocked
         this.circuitBreakerTripped = false;
@@ -53,6 +60,24 @@ class TradingEngine extends EventEmitter {
 
     log(message) {
         this.emit('log', { message, timestamp: Date.now() });
+    }
+
+    // ---------- Helpers de posições (múltiplas por símbolo) ----------
+
+    addPosition(symbol, position) {
+        if (!this.positions[symbol]) this.positions[symbol] = [];
+        this.positions[symbol].push(position);
+    }
+
+    allPositions() {
+        return Object.values(this.positions).flat();
+    }
+
+    findPosition(symbol, positionId) {
+        const list = this.positions[symbol] || [];
+        // Sem positionId (chamadas antigas / cliente que só sabe do símbolo), assume a
+        // primeira posição da lista — mantém compatibilidade com quem só opera uma por vez.
+        return positionId ? list.find((p) => p.id === positionId) : list[0];
     }
 
     // ---------- Indicadores ----------
@@ -198,7 +223,7 @@ class TradingEngine extends EventEmitter {
     // ---------- Dimensionamento de posição por risco ----------
 
     computeSizing(symbol, price, atr, side) {
-        const openExposure = Object.values(this.positions).reduce((sum, p) => sum + p.entryPrice * p.quantity, 0);
+        const openExposure = Object.values(this.positions).flat().reduce((sum, p) => sum + p.entryPrice * p.quantity, 0);
         const freeBalance = Math.max(0, this.balance - openExposure);
 
         const stopDistance = Math.max(atr * this.config.atrMultiplierSL, price * 0.0005);
@@ -222,8 +247,11 @@ class TradingEngine extends EventEmitter {
 
     tryEnter(symbol, analysis, now) {
         if (this.circuitBreakerTripped) return null;
-        if (this.positions[symbol]) return null;
-        if (Object.keys(this.positions).length >= this.config.maxPositions) return null;
+        // O robô automático continua conservador: só entra se não houver NENHUMA posição
+        // (manual ou automática) já aberta nesse símbolo. Empilhar entradas no mesmo par é
+        // uma decisão manual do usuário, não algo que a estratégia automática faz sozinha.
+        if ((this.positions[symbol] || []).length > 0) return null;
+        if (this.allPositions().length >= this.config.maxPositions) return null;
         if (this.isOnCooldown(symbol, now)) return null;
         if (!analysis.atr || Number.isNaN(analysis.atr)) return null;
 
@@ -234,6 +262,7 @@ class TradingEngine extends EventEmitter {
         if (!quantity || quantity <= 0 || cost < 1) return decision;
 
         const position = {
+            id: randomPositionId(),
             symbol,
             side: decision.signal,
             entryPrice: analysis.price,
@@ -241,13 +270,14 @@ class TradingEngine extends EventEmitter {
             takeProfit,
             stopLoss,
             initialStopLoss: stopLoss,
+            isManual: false,
             entryTime: now,
             highestPrice: analysis.price,
             lowestPrice: analysis.price,
             score: decision.score,
             reasons: decision.reasons
         };
-        this.positions[symbol] = position;
+        this.addPosition(symbol, position);
         this.emit('trade_opened', { ...position });
         this.log(`${decision.signal} em ${symbol} @ ${analysis.price.toFixed(2)} | score ${decision.score}/${decision.maxScore} (${decision.reasons.join(', ')})`);
         return decision;
@@ -294,9 +324,11 @@ class TradingEngine extends EventEmitter {
         return (entryNotional + exitNotional) * rate;
     }
 
-    closePosition(symbol, exitPrice, now, reason) {
-        const position = this.positions[symbol];
-        if (!position) return null;
+    closePosition(symbol, positionId, exitPrice, now, reason) {
+        const list = this.positions[symbol];
+        const idx = list ? list.findIndex((p) => p.id === positionId) : -1;
+        if (idx === -1) return null;
+        const position = list[idx];
 
         const grossPnl = position.side === 'BUY'
             ? (exitPrice - position.entryPrice) * position.quantity
@@ -310,7 +342,8 @@ class TradingEngine extends EventEmitter {
         const trade = { ...position, exitPrice, exitTime: now, grossPnl, costs, pnl, pnlPercent, reason };
         this.trades.push(trade);
         if (this.trades.length > TRADES_LOG_CAP) this.trades.shift();
-        delete this.positions[symbol];
+        list.splice(idx, 1);
+        if (list.length === 0) delete this.positions[symbol];
 
         // Atualiza os acumuladores (ver constructor) — precisam refletir TODO o histórico,
         // não só o que sobrou em this.trades depois do cap.
@@ -402,7 +435,7 @@ class TradingEngine extends EventEmitter {
 
     getFreeBalance() {
         let openExposure = 0;
-        for (const p of Object.values(this.positions)) {
+        for (const p of this.allPositions()) {
             openExposure += (p.margin || (p.entryPrice * p.quantity));
         }
         return Math.max(0, this.balance - openExposure);
@@ -446,6 +479,7 @@ class TradingEngine extends EventEmitter {
 
         const now = Date.now();
         const position = {
+            id: randomPositionId(),
             symbol,
             side,
             entryPrice,
@@ -466,36 +500,37 @@ class TradingEngine extends EventEmitter {
             reasons: ['Ordem manual do usuário']
         };
 
-        this.positions[symbol] = position;
+        this.addPosition(symbol, position);
         this.emit('trade_opened', { ...position });
         this.log(`[MANUAL] Ordem ${side} ${lev}x em ${symbol} aberta @ $${entryPrice.toFixed(2)} (Margem: $${margin.toFixed(2)})`);
         this.emit('stats', this.getStats());
         return position;
     }
 
-    closePositionManual(symbol, reason = 'MANUAL_CLOSE') {
-        const position = this.positions[symbol];
+    closePositionManual(symbol, positionId, reason = 'MANUAL_CLOSE') {
+        const position = this.findPosition(symbol, positionId);
         if (!position) throw new Error(`Nenhuma posição aberta encontrada para ${symbol}.`);
 
         const currentPrice = this.lastPriceBySymbol[symbol] || position.entryPrice;
         const now = Date.now();
-        return this.closePosition(symbol, currentPrice, now, reason);
+        return this.closePosition(symbol, position.id, currentPrice, now, reason);
     }
 
     closeAllPositionsManual(reason = 'MANUAL_CLOSE_ALL') {
-        const symbols = Object.keys(this.positions);
         const closed = [];
         const now = Date.now();
-        for (const sym of symbols) {
-            const currentPrice = this.lastPriceBySymbol[sym] || this.positions[sym].entryPrice;
-            const trade = this.closePosition(sym, currentPrice, now, reason);
-            if (trade) closed.push(trade);
+        for (const [sym, list] of Object.entries(this.positions)) {
+            for (const position of [...list]) {
+                const currentPrice = this.lastPriceBySymbol[sym] || position.entryPrice;
+                const trade = this.closePosition(sym, position.id, currentPrice, now, reason);
+                if (trade) closed.push(trade);
+            }
         }
         return closed;
     }
 
-    updateStopsManual(symbol, { takeProfit, stopLoss, isTrailingStop }) {
-        const position = this.positions[symbol];
+    updateStopsManual(symbol, positionId, { takeProfit, stopLoss, isTrailingStop }) {
+        const position = this.findPosition(symbol, positionId);
         if (!position) throw new Error(`Posição ${symbol} não encontrada.`);
 
         if (takeProfit !== undefined && takeProfit !== null && !Number.isNaN(Number(takeProfit))) {
@@ -552,17 +587,18 @@ class TradingEngine extends EventEmitter {
         this.lastPriceBySymbol[symbol] = analysis.price;
         this.emit('analysis', analysis);
 
-        const position = this.positions[symbol];
-        if (position) {
+        // Itera uma cópia da lista: fechar uma posição durante o loop (liquidação, TP/SL)
+        // não pode pular a checagem da próxima posição do mesmo símbolo.
+        const list = this.positions[symbol] || [];
+        for (const position of [...list]) {
             // Verifica liquidação se alavancado
             if (position.liquidationPrice) {
                 const isLiquidated = position.side === 'BUY'
                     ? analysis.price <= position.liquidationPrice
                     : analysis.price >= position.liquidationPrice;
                 if (isLiquidated) {
-                    this.closePosition(symbol, position.liquidationPrice, now, 'LIQUIDATION');
-                    this.emit('stats', this.getStats());
-                    return analysis;
+                    this.closePosition(symbol, position.id, position.liquidationPrice, now, 'LIQUIDATION');
+                    continue;
                 }
             }
 
@@ -570,8 +606,10 @@ class TradingEngine extends EventEmitter {
                 this.updateTrailingStop(position, analysis.price, analysis.atr);
             }
             const exitReason = this.checkExit(position, analysis.price, now);
-            if (exitReason) this.closePosition(symbol, analysis.price, now, exitReason);
-        } else if (allowEntry && this.botAutoEnabled) {
+            if (exitReason) this.closePosition(symbol, position.id, analysis.price, now, exitReason);
+        }
+
+        if ((this.positions[symbol] || []).length === 0 && allowEntry && this.botAutoEnabled) {
             this.tryEnter(symbol, analysis, now);
         }
 
@@ -595,7 +633,7 @@ class TradingEngine extends EventEmitter {
         }
 
         // Posições com cálculo de P&L não realizado e preço atual
-        const openPositions = Object.values(this.positions).map(p => {
+        const openPositions = this.allPositions().map(p => {
             const currentPrice = this.lastPriceBySymbol[p.symbol] || p.entryPrice;
             const gross = p.side === 'BUY'
                 ? (currentPrice - p.entryPrice) * p.quantity

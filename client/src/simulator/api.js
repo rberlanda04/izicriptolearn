@@ -26,9 +26,11 @@ export const simulatorApi = {
   requestAiInsight: (symbol) => req(`/ai-insight/${encodeURIComponent(symbol)}`, { method: 'POST' }),
   chat: (messages) => req('/ai-chat', { method: 'POST', body: JSON.stringify({ messages }) }),
   openTrade: (params) => req('/trade/open', { method: 'POST', body: JSON.stringify(params) }),
-  closeTrade: (symbol, reason) => req('/trade/close', { method: 'POST', body: JSON.stringify({ symbol, reason }) }),
+  // positionId identifica QUAL posição fechar/editar quando há mais de uma aberta no
+  // mesmo símbolo — sem isso, o servidor não saberia distinguir entre elas.
+  closeTrade: (symbol, positionId, reason) => req('/trade/close', { method: 'POST', body: JSON.stringify({ symbol, positionId, reason }) }),
   closeAllTrades: (reason) => req('/trade/close-all', { method: 'POST', body: JSON.stringify({ reason }) }),
-  updateStops: (symbol, stops) => req('/trade/update-stops', { method: 'POST', body: JSON.stringify({ symbol, ...stops }) }),
+  updateStops: (symbol, positionId, stops) => req('/trade/update-stops', { method: 'POST', body: JSON.stringify({ symbol, positionId, ...stops }) }),
   resetAccount: (initialCapital = 10000) => req('/reset', { method: 'POST', body: JSON.stringify({ initialCapital }) }),
   toggleBotAuto: (enabled) => req('/toggle-bot', { method: 'POST', body: JSON.stringify({ enabled }) }),
 };

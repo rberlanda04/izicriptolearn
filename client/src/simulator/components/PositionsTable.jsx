@@ -9,17 +9,19 @@ import { simCard, simTitle, simMuted, simText } from '../theme.js';
 
 export function PositionsTable({ positions = [], onPositionAction }) {
   const [selectedForEdit, setSelectedForEdit] = useState(null);
-  const [busySymbol, setBusySymbol] = useState(null);
+  const [busyPositionId, setBusyPositionId] = useState(null);
 
-  const handleClose = async (symbol) => {
-    setBusySymbol(symbol);
+  // Identifica a posição por id, não só por símbolo — pode haver mais de uma posição
+  // aberta no mesmo par ao mesmo tempo (ex: média de preço, ou hedge long+short).
+  const handleClose = async (position) => {
+    setBusyPositionId(position.id);
     try {
-      await simulatorApi.closeTrade(symbol, 'MANUAL_CLOSE');
+      await simulatorApi.closeTrade(position.symbol, position.id, 'MANUAL_CLOSE');
       if (onPositionAction) onPositionAction();
     } catch (err) {
       alert(`Erro ao fechar posição: ${err.message}`);
     } finally {
-      setBusySymbol(null);
+      setBusyPositionId(null);
     }
   };
 
@@ -86,7 +88,7 @@ export function PositionsTable({ positions = [], onPositionAction }) {
                     const currentPrice = p.currentPrice || p.entryPrice;
 
                     return (
-                      <TR key={p.symbol} className="border-sim-border hover:bg-panel-2/50 transition-colors">
+                      <TR key={p.id} className="border-sim-border hover:bg-panel-2/50 transition-colors">
                         {/* Símbolo e Lado */}
                         <TD className={simText}>
                           <div className="flex items-center gap-2">
@@ -144,12 +146,12 @@ export function PositionsTable({ positions = [], onPositionAction }) {
                               TP/SL
                             </button>
                             <button
-                              onClick={() => handleClose(p.symbol)}
-                              disabled={busySymbol === p.symbol}
+                              onClick={() => handleClose(p)}
+                              disabled={busyPositionId === p.id}
                               className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 transition-colors disabled:opacity-50"
                               title="Fechar posição imediatamente a mercado"
                             >
-                              <Zap size={11} /> {busySymbol === p.symbol ? '...' : 'Fechar'}
+                              <Zap size={11} /> {busyPositionId === p.id ? '...' : 'Fechar'}
                             </button>
                           </div>
                         </TD>
