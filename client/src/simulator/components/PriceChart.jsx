@@ -11,15 +11,15 @@ export function PriceChart({ symbols, activeSymbol, onSelect, analysis, position
 
   return (
     <Card className={simCard}>
-      <CardHeader>
+      <CardHeader className="flex-wrap">
         <CardTitle className={cn('flex items-center gap-2', simTitle)}><LineChartIcon size={15} className="text-accent" />Gráfico de velas ao vivo</CardTitle>
-        <div className="flex gap-1">
+        <div className="flex gap-1 overflow-x-auto max-w-full">
           {symbols.map((s) => (
             <button
               key={s}
               onClick={() => onSelect(s)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shrink-0',
                 activeSymbol === s ? 'bg-accent text-ink' : 'bg-white/10 text-on-dark-muted hover:text-on-dark-strong'
               )}
             >

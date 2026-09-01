@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserPlus, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { Button } from '../components/ui/button.jsx';
@@ -14,6 +14,10 @@ const HIGHLIGHTS = [
 export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Mesma regra do login: se veio de uma rota protegida, volta pra lá; senão cai na Home,
+  // que já funciona como painel de "por onde continuar" mesmo pra quem acabou de chegar.
+  const from = location.state?.from;
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
@@ -25,7 +29,8 @@ export function RegisterPage() {
     setError(null);
     try {
       await register(form.email, form.password, form.name);
-      navigate('/cursos');
+      if (from) navigate(`${from.pathname}${from.search || ''}`, { replace: true });
+      else navigate('/', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -132,7 +137,7 @@ export function RegisterPage() {
           </form>
 
           <p className="text-sm text-muted mt-6 text-center">
-            Já tem conta? <Link to="/entrar" className="text-accent-deep font-semibold hover:underline">Entrar</Link>
+            Já tem conta? <Link to="/entrar" state={{ from }} className="text-accent-deep font-semibold hover:underline">Entrar</Link>
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { CheckCircle2, Circle, Clock, Lock, PlayCircle } from 'lucide-react';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
@@ -9,6 +9,7 @@ import { Skeleton } from '../components/ui/Skeleton.jsx';
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
   const [progress, setProgress] = useState([]);
@@ -70,7 +71,7 @@ export function CourseDetailPage() {
             <div className="inline-flex items-center gap-2 mt-8 bg-white/10 px-6 py-3 rounded-full font-semibold text-sm">
               <Lock size={16} />
               {!user ? (
-                <>Crie uma conta grátis — <Link to="/registrar" className="underline underline-offset-2">cadastre-se</Link></>
+                <>Crie uma conta grátis — <Link to="/registrar" state={{ from: location }} className="underline underline-offset-2">cadastre-se</Link></>
               ) : (
                 <>Curso Pro — <Link to="/precos" className="underline underline-offset-2">ver planos</Link></>
               )}

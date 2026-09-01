@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Award, CheckCircle2, Circle, Clock, Lock, Maximize2, Minimize2, Sparkles } from 'lucide-react';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
@@ -12,6 +12,7 @@ import { CertificateModal } from '../components/CertificateModal.jsx';
 
 export function LessonPage() {
   const { courseId, lessonId } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
   const [progress, setProgress] = useState([]);
@@ -57,7 +58,7 @@ export function LessonPage() {
           <>
             <h1 className="text-xl font-bold">Crie uma conta gratuita para acessar</h1>
             <p className="text-muted text-sm mt-2">O conteúdo das aulas é liberado só para quem tem login — leva menos de um minuto e não custa nada.</p>
-            <Link to="/registrar" className="inline-block mt-6 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm">Criar conta grátis</Link>
+            <Link to="/registrar" state={{ from: location }} className="inline-block mt-6 bg-accent text-ink px-5 py-2.5 rounded-full font-semibold text-sm">Criar conta grátis</Link>
           </>
         ) : (
           <>

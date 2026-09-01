@@ -112,16 +112,16 @@ export function SimuladorPage() {
           </div>
 
           {/* Métricas de Saldo & Margem */}
-          <div className="flex items-center gap-6 font-[var(--font-mono)] text-xs">
-            <div>
+          <div className="flex items-center gap-4 sm:gap-6 font-[var(--font-mono)] text-xs overflow-x-auto w-full sm:w-auto min-w-0 -mx-6 px-6 sm:mx-0 sm:px-0">
+            <div className="shrink-0">
               <span className="text-[10px] text-on-dark-muted uppercase block">Saldo Total</span>
               <span className="font-bold text-on-dark-strong">${(stats?.balance ?? 10000).toFixed(2)}</span>
             </div>
-            <div>
+            <div className="shrink-0">
               <span className="text-[10px] text-on-dark-muted uppercase block">Margem Livre</span>
               <span className="font-bold text-good">${(stats?.freeMargin ?? stats?.balance ?? 10000).toFixed(2)}</span>
             </div>
-            <div>
+            <div className="shrink-0">
               <span className="text-[10px] text-on-dark-muted uppercase block">P&amp;L Não Realizado</span>
               <span className={cn('font-bold', unrealizedPositive ? 'text-good' : 'text-red-400')}>
                 {unrealizedPositive ? '+' : ''}${(stats?.totalUnrealizedPnl ?? 0).toFixed(2)}
@@ -129,11 +129,11 @@ export function SimuladorPage() {
             </div>
 
             {/* Controles Rápidos de Robô e Reset */}
-            <div className="flex items-center gap-2 pl-4 border-l border-sim-border">
+            <div className="flex items-center gap-2 pl-4 border-l border-sim-border shrink-0">
               <button
                 onClick={handleToggleBot}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors shrink-0 whitespace-nowrap',
                   botAuto
                     ? 'bg-accent/15 text-accent border-accent/40 hover:bg-accent/25'
                     : 'bg-panel-2 text-on-dark-muted border-sim-border hover:text-on-dark'
@@ -147,7 +147,7 @@ export function SimuladorPage() {
               <button
                 onClick={handleResetAccount}
                 disabled={busyReset}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-panel-2 hover:bg-white/10 text-on-dark-muted hover:text-on-dark border border-sim-border transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-panel-2 hover:bg-white/10 text-on-dark-muted hover:text-on-dark border border-sim-border transition-colors shrink-0 whitespace-nowrap"
                 title="Resetar conta fictícia para $10.000"
               >
                 <RotateCcw size={12} className={busyReset ? 'animate-spin' : ''} />
@@ -161,7 +161,8 @@ export function SimuladorPage() {
       <div className="max-w-7xl mx-auto px-6 pt-6">
         {/* Abas Superiores */}
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="bg-white/10 mb-6">
+          <div className="overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0 mb-6">
+          <TabsList className="bg-white/10 w-max">
             <TabsTrigger value="trade" className="text-on-dark-muted data-[state=active]:bg-accent data-[state=active]:text-ink font-bold">
               ⚡ Estação de Trading
             </TabsTrigger>
@@ -175,6 +176,7 @@ export function SimuladorPage() {
               💬 Chat com o Analista IA
             </TabsTrigger>
           </TabsList>
+          </div>
 
           {/* ABA 1: WORKSTATION PRINCIPAL DE TRADING */}
           {tab === 'trade' && (

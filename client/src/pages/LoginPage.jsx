@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../AuthContext.jsx';
 import { Button } from '../components/ui/button.jsx';
@@ -14,6 +14,11 @@ const HIGHLIGHTS = [
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Se a pessoa foi mandada pra cá a partir de uma rota protegida (ex: tentou abrir uma aula
+  // ou o simulador sem estar logada), volta direto pra lá depois do login — em vez de um
+  // destino genérico que a obrigaria a procurar de novo o que queria fazer.
+  const from = location.state?.from;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,7 +31,8 @@ export function LoginPage() {
     setError(null);
     try {
       const user = await login(email, password);
-      navigate(user.role === 'admin' ? '/admin' : '/cursos');
+      if (from) navigate(`${from.pathname}${from.search || ''}`, { replace: true });
+      else navigate(user.role === 'admin' ? '/admin' : '/', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -120,7 +126,7 @@ export function LoginPage() {
           </form>
 
           <p className="text-sm text-muted mt-6 text-center">
-            Não tem conta? <Link to="/registrar" className="text-accent-deep font-semibold hover:underline">Criar conta grátis</Link>
+            Não tem conta? <Link to="/registrar" state={{ from }} className="text-accent-deep font-semibold hover:underline">Criar conta grátis</Link>
           </p>
         </div>
       </div>

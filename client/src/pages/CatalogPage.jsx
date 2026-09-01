@@ -36,13 +36,13 @@ export function CatalogPage() {
       <h1 className="text-3xl font-bold">Sua trilha de aprendizado</h1>
       <p className="text-muted mt-2">{courses.length || 6} cursos conectados, do básico ao avançado — mais o simulador de trade pra praticar no caminho.</p>
 
-      <div className="flex gap-2 mt-6">
+      <div className="flex gap-2 mt-6 overflow-x-auto pb-1 -mx-6 px-6 sm:mx-0 sm:px-0">
         {['todos', 'iniciante', 'intermediario', 'avancado'].map((l) => (
           <button
             key={l}
             onClick={() => setLevel(l)}
             className={cn(
-              'px-4 py-1.5 rounded-full text-sm font-medium border transition-colors',
+              'shrink-0 px-4 py-1.5 rounded-full text-sm font-medium border transition-colors',
               level === l ? 'bg-accent text-ink border-accent font-semibold' : 'border-border-soft text-muted hover:border-accent'
             )}
           >
