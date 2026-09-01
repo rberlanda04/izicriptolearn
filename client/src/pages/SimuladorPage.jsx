@@ -27,7 +27,7 @@ export function SimuladorPage() {
   const [busyReset, setBusyReset] = useState(false);
 
   const {
-    connected, stats, trades, logs, analysisBySymbol, historyBySymbol, aiInsights, aiEnabled, config,
+    connected, stats, trades, logs, analysisBySymbol, aiInsights, aiEnabled, config,
   } = useSimulatorSocket();
 
   useEffect(() => {
@@ -186,8 +186,9 @@ export function SimuladorPage() {
                   symbols={symbols}
                   activeSymbol={symbol}
                   onSelect={setActiveSymbol}
-                  history={historyBySymbol[symbol]}
                   analysis={analysisBySymbol[symbol]}
+                  positions={stats?.openPositions || []}
+                  trades={trades}
                   indicatorsLessonHref={indicatorsLessonHref}
                 />
 

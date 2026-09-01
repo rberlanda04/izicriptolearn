@@ -22,6 +22,7 @@ export const simulatorApi = {
   getStatus: () => req('/status'),
   getConfig: () => req('/config'),
   getTrades: () => req('/trades'),
+  getCandles: (symbol) => req(`/candles/${encodeURIComponent(symbol)}`),
   runBacktest: (days) => req('/backtest', { method: 'POST', body: JSON.stringify({ days }) }),
   requestAiInsight: (symbol) => req(`/ai-insight/${encodeURIComponent(symbol)}`, { method: 'POST' }),
   chat: (messages) => req('/ai-chat', { method: 'POST', body: JSON.stringify({ messages }) }),

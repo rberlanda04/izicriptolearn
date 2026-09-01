@@ -512,6 +512,21 @@ app.post('/api/simulator/ai-insight/:symbol', authenticate, aiLimiter, wrap(asyn
     res.json({ text });
 }));
 
+// Candles reais (OHLCV) pro gráfico de velas — mesma fonte (MarketData/OKX, com cache)
+// que a engine já usa pra calcular os indicadores, então o gráfico mostra exatamente os
+// dados em que a estratégia está baseando as decisões.
+app.get('/api/simulator/candles/:symbol', authenticate, wrap(async (req, res) => {
+    const sim = simulatorSessions.getOrCreate(req.user.sub);
+    const symbol = decodeURIComponent(req.params.symbol);
+    if (!sim.config.symbols.includes(symbol)) return res.status(400).json({ error: 'Símbolo não suportado.' });
+    try {
+        const candles = await sim.market.fetchOHLCV(symbol, sim.config.primaryTimeframe, 200);
+        res.json({ symbol, timeframe: sim.config.primaryTimeframe, candles });
+    } catch (err) {
+        res.status(502).json({ error: `Falha ao buscar candles: ${err.message}` });
+    }
+}));
+
 // ---------- Rotas de Operação Manual & Gestão de Posições (Exchange Style) ----------
 
 app.post('/api/simulator/trade/open', authenticate, wrap(async (req, res) => {
