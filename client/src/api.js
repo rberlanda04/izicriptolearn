@@ -1,7 +1,7 @@
 // Em dev, o Vite faz proxy de /api para o backend local (ver vite.config.js).
 // Em produção no Firebase Hosting não existe esse proxy — o Hosting só serve arquivos
 // estáticos, não roda o Express — então a URL completa do backend precisa ser embutida
-// no build via VITE_API_BASE_URL (ex: https://izicripto-api.onrender.com).
+// no build via VITE_API_BASE_URL (ex: https://izicripto-api-xxx.southamerica-east1.run.app).
 const BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api';
 
 function getToken() {
@@ -19,7 +19,11 @@ async function req(path, options = {}) {
   });
   if (res.status === 204) return null;
   const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(body?.error || `${path} -> ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(body?.error || `${path} -> ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   return body;
 }
 

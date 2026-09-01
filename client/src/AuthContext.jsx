@@ -9,7 +9,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!tokenStorage.get()) { setLoading(false); return; }
-    api.me().then(setUser).catch(() => tokenStorage.clear()).finally(() => setLoading(false));
+    // Só derruba a sessão quando o servidor de fato rejeita o token (401/404) — uma
+    // falha de rede passageira (aba abrindo rápido, backend acordando no free tier,
+    // um blip qualquer) não pode apagar o login do usuário silenciosamente.
+    api.me().then(setUser).catch((err) => {
+      if (err.status === 401 || err.status === 404) tokenStorage.clear();
+    }).finally(() => setLoading(false));
   }, []);
 
   const login = async (email, password) => {

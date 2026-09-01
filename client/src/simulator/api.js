@@ -1,7 +1,7 @@
 import { tokenStorage } from '../api.js';
 
 // Mesma base do backend usada pelo resto do app (ver ../api.js) — em dev, o Vite faz proxy
-// de /api para o backend local; em produção, VITE_API_BASE_URL aponta pro Render.
+// de /api para o backend local; em produção, VITE_API_BASE_URL aponta pro Cloud Run.
 const BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/simulator';
 
 async function req(path, options = {}) {
