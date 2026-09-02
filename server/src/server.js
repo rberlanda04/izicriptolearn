@@ -7,7 +7,7 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const { db, FieldValue } = require('./firestore');
 const { hashPassword, verifyPassword, signToken, verifyToken, authenticate, optionalAuthenticate, requireAdmin } = require('./auth');
-const { isBillingConfigured, createCheckoutSession, constructWebhookEvent } = require('./billing');
+const { isBillingConfigured, isAnnualConfigured, createCheckoutSession, constructWebhookEvent } = require('./billing');
 const { SimulatorSessionManager } = require('./simulator/sessionManager');
 const { defaultSimulatorConfig } = require('./simulator/config');
 const { runBacktest } = require('./simulator/backtest');
@@ -436,13 +436,14 @@ app.get('/api/journey', authenticate, wrap(async (req, res) => {
 // ---------- Billing ----------
 
 app.get('/api/billing/status', (req, res) => {
-    res.json({ configured: isBillingConfigured() });
+    res.json({ configured: isBillingConfigured(), annualConfigured: isAnnualConfigured() });
 });
 
 app.post('/api/billing/checkout', authenticate, wrap(async (req, res) => {
     try {
+        const period = req.body?.period === 'annual' ? 'annual' : 'monthly';
         const user = await findUserById(req.user.sub);
-        const session = await createCheckoutSession(user);
+        const session = await createCheckoutSession(user, period);
         res.json({ url: session.url });
     } catch (err) {
         res.status(400).json({ error: err.message });

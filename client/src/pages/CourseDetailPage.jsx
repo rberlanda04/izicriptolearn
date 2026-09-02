@@ -6,6 +6,8 @@ import { useAuth } from '../AuthContext.jsx';
 import { Badge } from '../components/ui/card.jsx';
 import { CourseCover } from '../components/CourseCover.jsx';
 import { Skeleton } from '../components/ui/Skeleton.jsx';
+import { courseCoverUrl } from '../lib/coverImage.js';
+import { useSeo, useJsonLd, SITE_URL } from '../lib/useSeo.js';
 
 export function CourseDetailPage() {
   const { courseId } = useParams();
@@ -20,6 +22,25 @@ export function CourseDetailPage() {
     api.getCourse(courseId).then(setCourse).catch((e) => setError(e.message));
     if (user) api.getProgress().then(setProgress).catch(() => {});
   }, [courseId, user]);
+
+  useSeo(course ? {
+    title: course.title,
+    description: course.summary,
+    path: `/cursos/${course.id}`,
+    image: courseCoverUrl(course, { width: 1200, height: 630 }),
+  } : null);
+
+  useJsonLd(course ? {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: course.title,
+    description: course.summary,
+    url: `${SITE_URL}/cursos/${course.id}`,
+    provider: { '@type': 'Organization', name: 'iziCripto', url: SITE_URL },
+    ...(course.isPro
+      ? { offers: { '@type': 'Offer', category: 'subscription', price: '29.00', priceCurrency: 'BRL' } }
+      : { isAccessibleForFree: true }),
+  } : null);
 
   if (error) return <div className="max-w-4xl mx-auto px-6 py-16 text-muted">Curso não encontrado.</div>;
   if (!course) {

@@ -18,6 +18,7 @@ import { useSimulatorSocket } from '../simulator/useSimulatorSocket.js';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { cn } from '../lib/utils.js';
+import { useSeo } from '../lib/useSeo.js';
 
 export function SimuladorPage() {
   const [tab, setTab] = useState('trade'); // 'trade' (workstation), 'analytics', 'backtest', 'chat'
@@ -25,6 +26,8 @@ export function SimuladorPage() {
   const [indicatorsLessonHref, setIndicatorsLessonHref] = useState(null);
   const [botAuto, setBotAuto] = useState(true);
   const [busyReset, setBusyReset] = useState(false);
+
+  useSeo({ title: 'Simulador de Trade', path: '/simulador', noindex: true });
 
   const {
     connected, stats, trades, logs, analysisBySymbol, aiInsights, aiEnabled, config,

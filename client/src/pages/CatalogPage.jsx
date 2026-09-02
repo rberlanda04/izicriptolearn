@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CheckCircle2, Lock, LineChart } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, Lock, LineChart, Search, X } from 'lucide-react';
 import { Card, Badge } from '../components/ui/card.jsx';
 import { CourseCardSkeleton } from '../components/ui/Skeleton.jsx';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { cn } from '../lib/utils.js';
 import { CourseCover } from '../components/CourseCover.jsx';
+import { useSeo } from '../lib/useSeo.js';
 
 const LEVEL_LABEL = { iniciante: 'Iniciante', intermediario: 'Intermediário', avancado: 'Avançado' };
 
@@ -16,6 +17,8 @@ export function CatalogPage() {
   const [progressByCourse, setProgressByCourse] = useState({});
   const [level, setLevel] = useState('todos');
   const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get('q') || '';
 
   useEffect(() => {
     api.listCourses().then(setCourses).finally(() => setLoading(false));
@@ -26,15 +29,40 @@ export function CatalogPage() {
     }
   }, [user]);
 
-  const filtered = useMemo(
-    () => (level === 'todos' ? courses : courses.filter((c) => c.level === level)),
-    [courses, level]
-  );
+  const filtered = useMemo(() => {
+    let list = level === 'todos' ? courses : courses.filter((c) => c.level === level);
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((c) =>
+        [c.title, c.summary, c.category].filter(Boolean).some((f) => f.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [courses, level, query]);
+
+  const clearSearch = () => setSearchParams((p) => { p.delete('q'); return p; });
+
+  useSeo({
+    title: 'Cursos de Cripto e Blockchain',
+    description: `${courses.length || 8} cursos conectados, do básico ao avançado, com progresso salvo e simulador de trade para praticar no caminho.`,
+    path: '/cursos',
+  });
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-14">
       <h1 className="text-3xl font-bold">Sua trilha de aprendizado</h1>
       <p className="text-muted mt-2">{courses.length || 6} cursos conectados, do básico ao avançado — mais o simulador de trade pra praticar no caminho.</p>
+
+      {query && (
+        <div className="flex items-center gap-2 mt-5 text-sm">
+          <span className="flex items-center gap-1.5 bg-accent/10 text-accent-deep font-medium px-3 py-1.5 rounded-full">
+            <Search size={13} /> "{query}"
+          </span>
+          <button onClick={clearSearch} className="flex items-center gap-1 text-muted hover:text-text-strong text-xs">
+            <X size={13} /> limpar
+          </button>
+        </div>
+      )}
 
       <div className="flex gap-2 mt-6 overflow-x-auto pb-1 -mx-6 px-6 sm:mx-0 sm:px-0">
         {['todos', 'iniciante', 'intermediario', 'avancado'].map((l) => (
@@ -125,7 +153,9 @@ export function CatalogPage() {
             </Link>
           </div>
 
-          {filtered.length === 0 && <p className="text-muted">Nenhum curso neste nível ainda.</p>}
+          {filtered.length === 0 && (
+            <p className="text-muted">{query ? `Nenhum curso encontrado para "${query}".` : 'Nenhum curso neste nível ainda.'}</p>
+          )}
         </div>
       )}
     </div>

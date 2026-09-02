@@ -4,6 +4,7 @@ import { UserPlus, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loa
 import { useAuth } from '../AuthContext.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Logo } from '../components/Logo.jsx';
+import { useSeo } from '../lib/useSeo.js';
 
 const HIGHLIGHTS = [
   'Grátis pra sempre nos cursos de fundamentos',
@@ -18,6 +19,9 @@ export function RegisterPage() {
   // Mesma regra do login: se veio de uma rota protegida, volta pra lá; senão cai na Home,
   // que já funciona como painel de "por onde continuar" mesmo pra quem acabou de chegar.
   const from = location.state?.from;
+
+  useSeo({ title: 'Criar conta', path: '/registrar', noindex: true });
+
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);

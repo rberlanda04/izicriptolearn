@@ -5,3 +5,7 @@ dist/
 *.log
 .firebase/
 server/secrets/
+
+# Gerados por scripts/generate-sitemap.js a cada build (ver "prebuild" em client/package.json)
+client/public/sitemap.xml
+client/public/robots.txt

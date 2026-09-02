@@ -4,6 +4,7 @@ import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } fr
 import { useAuth } from '../AuthContext.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Logo } from '../components/Logo.jsx';
+import { useSeo } from '../lib/useSeo.js';
 
 const HIGHLIGHTS = [
   '8 cursos completos, do zero ao avançado',
@@ -19,6 +20,9 @@ export function LoginPage() {
   // ou o simulador sem estar logada), volta direto pra lá depois do login — em vez de um
   // destino genérico que a obrigaria a procurar de novo o que queria fazer.
   const from = location.state?.from;
+
+  useSeo({ title: 'Entrar', path: '/entrar', noindex: true });
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

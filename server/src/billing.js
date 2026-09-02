@@ -14,13 +14,31 @@ function isBillingConfigured() {
     return isConfigured;
 }
 
-async function createCheckoutSession(user) {
+function isAnnualConfigured() {
+    return Boolean(process.env.STRIPE_PRICE_ID_PRO_ANNUAL);
+}
+
+// Mensal é o preço "clássico" (STRIPE_PRICE_ID_PRO, mantido pelo nome de sempre pra não
+// quebrar quem já configurou); anual é opcional — sem ele, só o mensal fica disponível.
+function priceIdForPeriod(period) {
+    if (period === 'annual') return process.env.STRIPE_PRICE_ID_PRO_ANNUAL || null;
+    return process.env.STRIPE_PRICE_ID_PRO || null;
+}
+
+async function createCheckoutSession(user, period = 'monthly') {
     if (!stripe) throw new Error('Stripe não configurado neste ambiente (defina STRIPE_SECRET_KEY no .env do servidor).');
-    if (!process.env.STRIPE_PRICE_ID_PRO) throw new Error('STRIPE_PRICE_ID_PRO não configurado — crie um preço recorrente no dashboard da Stripe e cole o ID aqui.');
+    const priceId = priceIdForPeriod(period);
+    if (!priceId) {
+        throw new Error(
+            period === 'annual'
+                ? 'STRIPE_PRICE_ID_PRO_ANNUAL não configurado — crie o preço anual no dashboard da Stripe e cole o ID aqui.'
+                : 'STRIPE_PRICE_ID_PRO não configurado — crie um preço recorrente no dashboard da Stripe e cole o ID aqui.'
+        );
+    }
 
     const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
-        line_items: [{ price: process.env.STRIPE_PRICE_ID_PRO, quantity: 1 }],
+        line_items: [{ price: priceId, quantity: 1 }],
         customer_email: user.email,
         client_reference_id: user.id,
         success_url: `${process.env.CLIENT_URL}/conta?checkout=sucesso`,
@@ -35,4 +53,4 @@ function constructWebhookEvent(rawBody, signature) {
     return stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
 }
 
-module.exports = { isBillingConfigured, createCheckoutSession, constructWebhookEvent };
+module.exports = { isBillingConfigured, isAnnualConfigured, createCheckoutSession, constructWebhookEvent };

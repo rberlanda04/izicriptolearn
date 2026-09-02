@@ -58,7 +58,7 @@ export const api = {
 
   // Billing
   billingStatus: () => req('/billing/status'),
-  checkout: () => req('/billing/checkout', { method: 'POST' }),
+  checkout: (period = 'monthly') => req('/billing/checkout', { method: 'POST', body: JSON.stringify({ period }) }),
 };
 
 export const tokenStorage = {

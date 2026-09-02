@@ -2,8 +2,11 @@ import { Link } from 'react-router-dom';
 import { Compass, ArrowRight } from 'lucide-react';
 import { Logo } from '../components/Logo.jsx';
 import { Button } from '../components/ui/button.jsx';
+import { useSeo } from '../lib/useSeo.js';
 
 export function NotFoundPage() {
+  useSeo({ title: 'Página não encontrada', path: '/404', noindex: true });
+
   return (
     <div className="max-w-md mx-auto px-6 py-28 text-center">
       <div className="relative inline-flex items-center justify-center mb-6">

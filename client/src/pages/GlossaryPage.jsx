@@ -2,9 +2,16 @@ import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { glossary } from '../data/glossary.js';
 import { Card } from '../components/ui/card.jsx';
+import { useSeo } from '../lib/useSeo.js';
 
 export function GlossaryPage() {
   const [q, setQ] = useState('');
+
+  useSeo({
+    title: 'Glossário de Cripto',
+    description: `${glossary.length} termos técnicos de blockchain e criptomoedas explicados em português simples.`,
+    path: '/glossario',
+  });
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     if (!query) return glossary;
