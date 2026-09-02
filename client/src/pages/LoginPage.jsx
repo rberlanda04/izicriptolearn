@@ -36,7 +36,7 @@ export function LoginPage() {
     try {
       const user = await login(email, password);
       if (from) navigate(`${from.pathname}${from.search || ''}`, { replace: true });
-      else navigate(user.role === 'admin' ? '/admin' : '/', { replace: true });
+      else navigate(user.role === 'admin' ? '/admin' : '/painel', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

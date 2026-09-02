@@ -138,8 +138,36 @@ function isUnlocked(course, user) {
 
 // ---------- Auth ----------
 
+// Cruzamento de dados: mapeia o objetivo respondido no cadastro pro curso que a jornada
+// sugere primeiro (ver recommendedCourseIdFor, usado em /api/journey mais abaixo).
+const GOAL_TO_COURSE = {
+    fundamentos: 'fundamentos-blockchain',
+    seguranca: 'carteiras-e-seguranca',
+    defi: 'defi-na-pratica',
+    trading: 'trading-e-gestao-de-risco',
+};
+function recommendedCourseIdFor(profile) {
+    if (!profile) return null;
+    // Quem nunca mexeu com cripto começa em fundamentos mesmo que o objetivo declarado seja
+    // mais avançado — pular a base não ajuda ninguém a chegar lá de verdade.
+    if (profile.experience === 'iniciante') return 'fundamentos-blockchain';
+    return GOAL_TO_COURSE[profile.goal] || 'fundamentos-blockchain';
+}
+
+const VALID_EXPERIENCE = ['iniciante', 'intermediario', 'avancado'];
+const VALID_GOAL = Object.keys(GOAL_TO_COURSE);
+
+// Aceita só valores conhecidos do questionário — nunca grava o que vier solto no corpo da
+// requisição direto no perfil do usuário.
+function sanitizeProfile(profile) {
+    if (!profile || typeof profile !== 'object') return null;
+    const experience = VALID_EXPERIENCE.includes(profile.experience) ? profile.experience : null;
+    const goal = VALID_GOAL.includes(profile.goal) ? profile.goal : null;
+    return experience && goal ? { experience, goal } : null;
+}
+
 app.post('/api/auth/register', authLimiter, wrap(async (req, res) => {
-    const { email, password, name } = req.body || {};
+    const { email, password, name, profile } = req.body || {};
     if (!email || !password || password.length < 6) {
         return res.status(400).json({ error: 'E-mail e senha (mín. 6 caracteres) são obrigatórios.' });
     }
@@ -148,7 +176,7 @@ app.post('/api/auth/register', authLimiter, wrap(async (req, res) => {
 
     const data = {
         email, passwordHash: await hashPassword(password), name: name || null,
-        role: 'student', plan: 'free', createdAt: FieldValue.serverTimestamp(),
+        role: 'student', plan: 'free', profile: sanitizeProfile(profile), createdAt: FieldValue.serverTimestamp(),
     };
     const ref = await db.collection('users').add(data);
     const user = { id: ref.id, ...data };
@@ -384,16 +412,27 @@ app.delete('/api/progress/:lessonId', authenticate, wrap(async (req, res) => {
 // ---------- Jornada (progresso agregado + próxima aula + sequência de dias) ----------
 // Alimenta o painel "Sua Jornada" da home logada: uma visão única que conecta cursos e
 // simulador, em vez de o usuário ter que descobrir sozinho onde parou ou o que fazer a seguir.
+// (GOAL_TO_COURSE e recommendedCourseIdFor ficam definidos lá em cima, perto do registro —
+// são usados tanto lá quanto aqui.)
 
 app.get('/api/journey', authenticate, wrap(async (req, res) => {
     const userId = req.user.sub;
-    const [progressSnap, courses] = await Promise.all([
+    const [progressSnap, courses, user] = await Promise.all([
         db.collection('users').doc(userId).collection('progress').get(),
         listCourses(),
+        findUserById(userId),
     ]);
 
     const completedIds = new Set(progressSnap.docs.map((d) => d.id));
     const totalLessons = courses.reduce((s, c) => s + (c.modules || []).reduce((s2, m) => s2 + (m.lessons || []).length, 0), 0);
+    const recommendedCourseId = recommendedCourseIdFor(user?.profile);
+
+    // Só reordena pra priorizar o curso recomendado enquanto o aluno não começou nada de
+    // verdade — depois disso, continuar o que já está em andamento importa mais do que a
+    // recomendação inicial.
+    const orderedCourses = (recommendedCourseId && completedIds.size === 0)
+        ? [...courses].sort((a, b) => (a.id === recommendedCourseId ? -1 : 0) - (b.id === recommendedCourseId ? -1 : 0))
+        : courses;
 
     // Sequência (streak): dias de calendário (UTC) consecutivos, terminando hoje ou ontem,
     // com pelo menos uma aula concluída em cada um.
@@ -408,23 +447,28 @@ app.get('/api/journey', authenticate, wrap(async (req, res) => {
         cursor.setUTCDate(cursor.getUTCDate() - 1);
     }
 
-    let nextLesson = null;
     const courseProgress = [];
     for (const course of courses) {
         const modules = (course.modules || []).slice().sort((a, b) => a.order - b.order);
         const lessonIds = modules.flatMap((m) => (m.lessons || []).map((l) => l.id));
         const completed = lessonIds.filter((id) => completedIds.has(id)).length;
         courseProgress.push({ id: course.id, title: course.title, isPro: course.isPro, completed, total: lessonIds.length });
+    }
 
-        if (nextLesson || !isUnlocked(course, req.user)) continue;
+    let nextLesson = null;
+    for (const course of orderedCourses) {
+        if (!isUnlocked(course, req.user)) continue;
+        const modules = (course.modules || []).slice().sort((a, b) => a.order - b.order);
         for (const mod of modules) {
             const lesson = (mod.lessons || []).slice().sort((a, b) => a.order - b.order).find((l) => !completedIds.has(l.id));
             if (lesson) { nextLesson = { courseId: course.id, courseTitle: course.title, lessonId: lesson.id, lessonTitle: lesson.title }; break; }
         }
+        if (nextLesson) break;
     }
 
     res.json({
         streakDays,
+        recommendedCourseId,
         totalCompleted: completedIds.size,
         totalLessons,
         xp: completedIds.size * 10,

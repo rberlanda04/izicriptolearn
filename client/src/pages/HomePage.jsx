@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowRight, Award, BookOpenCheck, Clock3, Flame, LineChart, Radar, Search, ShieldAlert, ShieldCheck, Trophy } from 'lucide-react';
 import { api } from '../api.js';
 import { simulatorApi } from '../simulator/api.js';
@@ -11,16 +11,22 @@ import { CourseCover } from '../components/CourseCover.jsx';
 import { cn } from '../lib/utils.js';
 import { useSeo } from '../lib/useSeo.js';
 
+// A home pública ('/') é só a página de marketing — quem já tem conta é mandado direto pro
+// painel, em vez de ver de novo a mesma vitrine de "crie uma conta grátis".
 export function HomePage() {
   const { user } = useAuth();
-  return user ? <JourneyDashboard user={user} /> : <MarketingHome />;
+  if (user) return <Navigate to="/painel" replace />;
+  return <MarketingHome />;
 }
 
-// ---------- Home logada: "Sua Jornada" — conecta progresso nos cursos com o simulador ----------
+// ---------- Painel (rota fechada) — "Sua Jornada": conecta progresso nos cursos com o simulador ----------
 
-function JourneyDashboard({ user }) {
+export function PainelPage() {
+  const { user } = useAuth();
   const [journey, setJourney] = useState(null);
   const [simStatus, setSimStatus] = useState(null);
+
+  useSeo({ title: 'Painel', path: '/painel', noindex: true });
 
   useEffect(() => {
     api.getJourney().then(setJourney).catch(() => {});

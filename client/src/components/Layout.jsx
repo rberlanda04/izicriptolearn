@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ArrowRight, BookOpen, LayoutGrid, Library, LineChart, LogOut, Menu, Search, ShieldCheck, Tag, User, X } from 'lucide-react';
+import { ArrowRight, BookOpen, LayoutDashboard, LayoutGrid, LogOut, Menu, Search, ShieldCheck, Tag, User, X } from 'lucide-react';
 import { Logo } from './Logo.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { CommandPalette } from './CommandPalette.jsx';
 import { api } from '../api.js';
 import { cn } from '../lib/utils.js';
 
+// Cursos e Simulador não aparecem mais aqui como links públicos — viraram parte da área
+// fechada (/painel), acessível só depois de logar. O nav público fica enxuto: só o que
+// tem valor pra quem ainda não é aluno.
 const NAV = [
-  { to: '/cursos', label: 'Cursos', icon: Library },
-  { to: '/simulador', label: 'Simulador', icon: LineChart },
   { to: '/glossario', label: 'Glossário', icon: BookOpen },
   { to: '/precos', label: 'Preços', icon: Tag },
 ];
@@ -88,6 +89,17 @@ export function Layout() {
                 </NavLink>
               );
             })}
+            {user && (
+              <NavLink
+                to="/painel"
+                className={({ isActive }) => cn(
+                  'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-colors',
+                  isActive ? 'bg-accent/12 text-accent-deep' : 'text-muted hover:text-text-strong'
+                )}
+              >
+                <LayoutDashboard size={15} /> Painel
+              </NavLink>
+            )}
             {user?.role === 'admin' && (
               <NavLink
                 to="/admin"
@@ -159,6 +171,17 @@ export function Layout() {
               </Link>
             )}
 
+            {user && (
+              <NavLink
+                to="/painel"
+                className={({ isActive }) => cn(
+                  'flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium',
+                  isActive ? 'bg-accent/12 text-accent-deep' : 'text-text hover:bg-accent/5'
+                )}
+              >
+                <LayoutDashboard size={16} /> Painel
+              </NavLink>
+            )}
             {NAV.map((item) => {
               const Icon = item.icon;
               return (

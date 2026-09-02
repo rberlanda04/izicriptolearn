@@ -5,12 +5,53 @@ import { useAuth } from '../AuthContext.jsx';
 import { Button } from '../components/ui/button.jsx';
 import { Logo } from '../components/Logo.jsx';
 import { useSeo } from '../lib/useSeo.js';
+import { cn } from '../lib/utils.js';
 
 const HIGHLIGHTS = [
   'Grátis pra sempre nos cursos de fundamentos',
   'Progresso, streak e certificado salvos na sua conta',
   'Cadastro leva menos de um minuto — sem cartão',
 ];
+
+// Perfil de entrada: alimenta o "cruzamento de dados" no backend (ver /api/journey), que usa
+// experience + goal pra decidir qual curso a Home/Painel sugere primeiro pra essa conta —
+// em vez de sempre mandar todo mundo pro mesmo curso 1, na mesma ordem.
+const EXPERIENCE_OPTIONS = [
+  { value: 'iniciante', label: 'Nunca mexi com cripto' },
+  { value: 'intermediario', label: 'Já tenho carteira ou uso corretora' },
+  { value: 'avancado', label: 'Já invisto e negocio' },
+];
+const GOAL_OPTIONS = [
+  { value: 'fundamentos', label: 'Entender o básico com segurança' },
+  { value: 'seguranca', label: 'Não cair em golpes e proteger o que tenho' },
+  { value: 'defi', label: 'Aprender DeFi e produtos avançados' },
+  { value: 'trading', label: 'Aprender a operar (trading)' },
+];
+
+function PillGroup({ label, options, value, onChange }) {
+  return (
+    <div className="flex flex-col gap-1.5 text-xs font-semibold text-muted">
+      {label}
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition-colors text-left',
+              value === opt.value
+                ? 'bg-accent/15 text-accent-deep border-accent/40 font-semibold'
+                : 'border-border-soft text-muted hover:border-accent/40'
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function RegisterPage() {
   const { register } = useAuth();
@@ -23,6 +64,7 @@ export function RegisterPage() {
   useSeo({ title: 'Criar conta', path: '/registrar', noindex: true });
 
   const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [profile, setProfile] = useState({ experience: 'iniciante', goal: 'fundamentos' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -32,9 +74,9 @@ export function RegisterPage() {
     setBusy(true);
     setError(null);
     try {
-      await register(form.email, form.password, form.name);
+      await register(form.email, form.password, form.name, profile);
       if (from) navigate(`${from.pathname}${from.search || ''}`, { replace: true });
-      else navigate('/', { replace: true });
+      else navigate('/painel', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -127,6 +169,20 @@ export function RegisterPage() {
                 </button>
               </div>
             </label>
+
+            <PillGroup
+              label="Sua experiência com cripto"
+              options={EXPERIENCE_OPTIONS}
+              value={profile.experience}
+              onChange={(v) => setProfile((p) => ({ ...p, experience: v }))}
+            />
+
+            <PillGroup
+              label="Seu objetivo principal aqui"
+              options={GOAL_OPTIONS}
+              value={profile.goal}
+              onChange={(v) => setProfile((p) => ({ ...p, goal: v }))}
+            />
 
             {error && (
               <div className="flex items-start gap-2 text-xs text-red-600 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">

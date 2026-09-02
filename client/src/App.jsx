@@ -2,7 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './AuthContext.jsx';
 import { Layout } from './components/Layout.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
-import { HomePage } from './pages/HomePage.jsx';
+import { HomePage, PainelPage } from './pages/HomePage.jsx';
 import { CatalogPage } from './pages/CatalogPage.jsx';
 import { CourseDetailPage } from './pages/CourseDetailPage.jsx';
 import { LessonPage } from './pages/LessonPage.jsx';
@@ -31,6 +31,7 @@ export default function App() {
             <Route path="/registrar" element={<RegisterPage />} />
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/painel" element={<PainelPage />} />
               <Route path="/simulador" element={<SimuladorPage />} />
             </Route>
 

@@ -15,6 +15,7 @@ export function CatalogPage() {
   const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [progressByCourse, setProgressByCourse] = useState({});
+  const [recommendedCourseId, setRecommendedCourseId] = useState(null);
   const [level, setLevel] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,7 +25,12 @@ export function CatalogPage() {
     api.listCourses().then(setCourses).finally(() => setLoading(false));
     if (user) {
       api.getJourney()
-        .then((j) => setProgressByCourse(Object.fromEntries(j.courseProgress.map((c) => [c.id, c]))))
+        .then((j) => {
+          setProgressByCourse(Object.fromEntries(j.courseProgress.map((c) => [c.id, c])));
+          // Só usa a recomendação do perfil pra reordenar a trilha enquanto o aluno ainda não
+          // começou nada — depois disso, a ordem natural do catálogo já reflete onde ele está.
+          if (j.totalCompleted === 0) setRecommendedCourseId(j.recommendedCourseId);
+        })
         .catch(() => {});
     }
   }, [user]);
@@ -37,8 +43,11 @@ export function CatalogPage() {
         [c.title, c.summary, c.category].filter(Boolean).some((f) => f.toLowerCase().includes(q))
       );
     }
+    if (recommendedCourseId) {
+      list = [...list].sort((a, b) => (a.id === recommendedCourseId ? -1 : 0) - (b.id === recommendedCourseId ? -1 : 0));
+    }
     return list;
-  }, [courses, level, query]);
+  }, [courses, level, query, recommendedCourseId]);
 
   const clearSearch = () => setSearchParams((p) => { p.delete('q'); return p; });
 

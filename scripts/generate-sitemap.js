@@ -42,6 +42,7 @@ ${urls.map((u) => `  <url>
 const robots = `User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /painel
 Disallow: /simulador
 Disallow: /entrar
 Disallow: /registrar
