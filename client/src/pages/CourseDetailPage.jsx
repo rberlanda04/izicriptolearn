@@ -6,7 +6,7 @@ import { useAuth } from '../AuthContext.jsx';
 import { Badge } from '../components/ui/card.jsx';
 import { CourseCover } from '../components/CourseCover.jsx';
 import { Skeleton } from '../components/ui/Skeleton.jsx';
-import { courseCoverUrl } from '../lib/coverImage.js';
+import { staticCoverUrl } from '../lib/coverImage.js';
 import { useSeo, useJsonLd, SITE_URL } from '../lib/useSeo.js';
 
 export function CourseDetailPage() {
@@ -27,7 +27,7 @@ export function CourseDetailPage() {
     title: course.title,
     description: course.summary,
     path: `/cursos/${course.id}`,
-    image: courseCoverUrl(course, { width: 1200, height: 630 }),
+    image: `${SITE_URL}${staticCoverUrl(course)}`,
   } : null);
 
   useJsonLd(course ? {

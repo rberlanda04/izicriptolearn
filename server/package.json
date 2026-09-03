@@ -23,5 +23,8 @@
     "stripe": "^17.0.0",
     "technicalindicators": "^3.1.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.4"
   }
 }
