@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Lock, Mail } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { Card } from '../components/ui/card.jsx';
@@ -10,7 +10,6 @@ import { useSeo } from '../lib/useSeo.js';
 
 const FREE_FEATURES = ['Cursos de fundamentos, segurança e riscos', 'Glossário completo', 'Progresso salvo na sua conta — pra sempre'];
 const PRO_FEATURES = ['Tudo do plano gratuito', 'Cursos avançados (DeFi, Stablecoins e Trading)', 'Simulador de trade completo, com IA', 'Novos cursos avançados assim que lançados'];
-const TEAM_FEATURES = ['Licenças em lote para sua equipe', 'Relatório de progresso por pessoa', 'Onboarding e conteúdo sob medida'];
 
 const ANNUAL_PRICE = 290;
 const MONTHLY_PRICE = 29;
@@ -79,7 +78,7 @@ export function PricingPage() {
         </div>
       )}
 
-      <div className="grid sm:grid-cols-3 gap-6 mt-10 items-stretch">
+      <div className="grid sm:grid-cols-2 max-w-2xl mx-auto gap-6 mt-10 items-stretch">
         <Card className="p-7 flex flex-col">
           <span className="text-xs font-semibold text-muted uppercase tracking-wide">Gratuito</span>
           <div className="text-3xl font-bold mt-2">R$ 0</div>
@@ -116,19 +115,6 @@ export function PricingPage() {
             </p>
           )}
           {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
-        </Card>
-
-        <Card className="p-7 flex flex-col">
-          <span className="text-xs font-semibold text-muted uppercase tracking-wide">Empresas</span>
-          <div className="text-3xl font-bold mt-2">Sob consulta</div>
-          <ul className="mt-5 space-y-2.5 flex-1">
-            {TEAM_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2 text-sm"><Check size={15} className="text-good shrink-0 mt-0.5" /> {f}</li>
-            ))}
-          </ul>
-          <a href="mailto:contato@izicripto.dev?subject=Plano%20Empresas" className="mt-6">
-            <Button variant="outline" className="w-full"><Mail size={15} /> Falar com a gente</Button>
-          </a>
         </Card>
       </div>
     </div>
