@@ -233,7 +233,7 @@ function MarketingHome() {
           </div>
 
           <div className="relative hidden lg:block">
-            <img src={bannerImg} alt="" className="w-52 -rotate-2 mb-4 ml-2 drop-shadow-xl" aria-hidden="true" />
+            <img src={bannerImg} alt="" className="w-full -rotate-2 mb-6 drop-shadow-xl" aria-hidden="true" />
             <div className="bg-panel-2 border border-white/10 rounded-2xl p-6 rotate-2">
               <div className="flex items-center gap-3 mb-4">
                 <span className="h-10 w-10 rounded-full bg-accent/15 flex items-center justify-center"><LineChart size={18} className="text-accent" /></span>
