@@ -7,6 +7,7 @@ import { CatalogPage } from './pages/CatalogPage.jsx';
 import { CourseDetailPage } from './pages/CourseDetailPage.jsx';
 import { LessonPage } from './pages/LessonPage.jsx';
 import { GlossaryPage } from './pages/GlossaryPage.jsx';
+import { CommunityPage } from './pages/CommunityPage.jsx';
 import { PricingPage } from './pages/PricingPage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/cursos/:courseId" element={<CourseDetailPage />} />
             <Route path="/cursos/:courseId/aulas/:lessonId" element={<LessonPage />} />
             <Route path="/glossario" element={<GlossaryPage />} />
+            <Route path="/comunidade" element={<CommunityPage />} />
             <Route path="/precos" element={<PricingPage />} />
             <Route path="/entrar" element={<LoginPage />} />
             <Route path="/registrar" element={<RegisterPage />} />

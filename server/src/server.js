@@ -154,6 +154,27 @@ function recommendedCourseIdFor(profile) {
     return GOAL_TO_COURSE[profile.goal] || 'fundamentos-blockchain';
 }
 
+// Sistema de níveis da Comunidade iziCripto — real, baseado em aulas de fato concluídas
+// (não em compra de plano nem em auto-declaração). Usado em /api/journey e na página
+// /comunidade do cliente.
+const COMMUNITY_LEVELS = [
+    { id: 'recruta', label: 'Recruta', min: 0 },
+    { id: 'nordico', label: 'Nórdico', min: 10 },
+    { id: 'jedi', label: 'JEDI', min: 30 },
+];
+function communityLevelFor(totalCompleted) {
+    let current = COMMUNITY_LEVELS[0];
+    for (const level of COMMUNITY_LEVELS) {
+        if (totalCompleted >= level.min) current = level;
+    }
+    const next = COMMUNITY_LEVELS.find((l) => l.min > current.min) || null;
+    return {
+        id: current.id,
+        label: current.label,
+        next: next ? { id: next.id, label: next.label, lessonsToGo: next.min - totalCompleted } : null,
+    };
+}
+
 const VALID_EXPERIENCE = ['iniciante', 'intermediario', 'avancado'];
 const VALID_GOAL = Object.keys(GOAL_TO_COURSE);
 
@@ -472,6 +493,7 @@ app.get('/api/journey', authenticate, wrap(async (req, res) => {
         totalCompleted: completedIds.size,
         totalLessons,
         xp: completedIds.size * 10,
+        communityLevel: communityLevelFor(completedIds.size),
         nextLesson,
         courseProgress,
     });
@@ -492,6 +514,25 @@ app.post('/api/billing/checkout', authenticate, wrap(async (req, res) => {
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
+}));
+
+// ---------- Comunidade ----------
+// Os canais (Discord/Telegram) ainda não existem de verdade — em vez de simular um link que
+// não leva a lugar nenhum, capturamos interesse real numa lista de espera. Rota pública
+// (não exige login: alguém pode querer entrar na lista antes mesmo de criar conta).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+app.post('/api/community/waitlist', authLimiter, wrap(async (req, res) => {
+    const { email, channel } = req.body || {};
+    if (!email || !EMAIL_RE.test(email)) {
+        return res.status(400).json({ error: 'E-mail inválido.' });
+    }
+    await db.collection('community_waitlist').doc(email.toLowerCase()).set({
+        email: email.toLowerCase(),
+        channel: ['discord', 'telegram'].includes(channel) ? channel : 'geral',
+        createdAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    res.status(201).json({ ok: true });
 }));
 
 // ---------- Simulador de trade (educacional) ----------

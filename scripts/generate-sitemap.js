@@ -17,6 +17,7 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'client', 'public');
 const staticRoutes = [
   { loc: '/', priority: '1.0', changefreq: 'weekly' },
   { loc: '/cursos', priority: '0.9', changefreq: 'weekly' },
+  { loc: '/comunidade', priority: '0.7', changefreq: 'weekly' },
   { loc: '/precos', priority: '0.6', changefreq: 'monthly' },
   { loc: '/glossario', priority: '0.5', changefreq: 'monthly' },
 ];

@@ -50,6 +50,15 @@ export function PainelPage() {
             <div className="flex items-center gap-1.5 bg-accent/10 text-accent-deep px-3.5 py-2 rounded-full text-sm font-semibold">
               <Trophy size={15} /> {journey.xp} XP
             </div>
+            {journey.communityLevel && (
+              <Link
+                to="/comunidade"
+                className="flex items-center gap-1.5 bg-good/10 text-good px-3.5 py-2 rounded-full text-sm font-semibold hover:bg-good/20 transition-colors"
+                title="Ver sua progressão na Comunidade"
+              >
+                <Award size={15} /> {journey.communityLevel.label}
+              </Link>
+            )}
           </div>
         )}
       </div>

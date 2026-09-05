@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ArrowRight, BookOpen, LayoutDashboard, LayoutGrid, LogOut, Menu, Search, ShieldCheck, Tag, User, X } from 'lucide-react';
+import { ArrowRight, BookOpen, LayoutDashboard, LayoutGrid, LogOut, Menu, Search, ShieldCheck, Tag, User, Users, X } from 'lucide-react';
 import { Logo } from './Logo.jsx';
 import { useAuth } from '../AuthContext.jsx';
 import { CommandPalette } from './CommandPalette.jsx';
@@ -11,6 +11,7 @@ import { cn } from '../lib/utils.js';
 // fechada (/painel), acessível só depois de logar. O nav público fica enxuto: só o que
 // tem valor pra quem ainda não é aluno.
 const NAV = [
+  { to: '/comunidade', label: 'Comunidade', icon: Users },
   { to: '/glossario', label: 'Glossário', icon: BookOpen },
   { to: '/precos', label: 'Preços', icon: Tag },
 ];
