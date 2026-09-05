@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Award, BadgeCheck, Compass, Heart, Lightbulb, Loader2, Mail, MessageCircle, Send, Sparkles, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Compass, Heart, Lightbulb, Loader2, Mail, MessageCircle, Send, ShieldCheck, Users } from 'lucide-react';
 import { api } from '../api.js';
 import { useAuth } from '../AuthContext.jsx';
 import { Card, Badge } from '../components/ui/card.jsx';
@@ -18,9 +18,9 @@ const VALUES = [
 // Os três níveis são reais: calculados a partir de aulas de fato concluídas (ver
 // /api/journey no backend), não uma métrica de vaidade nem algo que se compra.
 const LEVELS = [
-  { id: 'recruta', label: 'Recruta', range: '0 a 9 aulas concluídas', text: 'Todo mundo começa aqui. Dá pra virar Recruta só de criar conta e assistir a primeira aula.' },
-  { id: 'nordico', label: 'Nórdico', range: '10 a 29 aulas concluídas', text: 'Quem já passou de um curso só e está construindo uma base de verdade pelos fundamentos.' },
-  { id: 'jedi', label: 'JEDI', range: '30+ aulas concluídas', text: 'Perto de dominar o catálogo inteiro — da base até trading e gestão de risco avançada.' },
+  { id: 'explorador', label: 'Explorador', icon: Compass, range: '0 a 9 aulas concluídas', text: 'Todo mundo começa aqui. Dá pra virar Explorador só de criar conta e assistir a primeira aula.' },
+  { id: 'nativo', label: 'Nativo', icon: Users, range: '10 a 29 aulas concluídas', text: 'Já não é mais turista no ecossistema — construindo uma base de verdade pelos fundamentos.' },
+  { id: 'guardiao', label: 'Guardião', icon: ShieldCheck, range: '30+ aulas concluídas', text: 'Sabe reconhecer risco, proteger o que aprendeu e o que tem — perto de dominar o catálogo inteiro.' },
 ];
 
 function WaitlistForm({ channel, label, Icon }) {
@@ -72,7 +72,7 @@ export function CommunityPage() {
 
   useSeo({
     title: 'Comunidade',
-    description: 'A comunidade iziCripto conecta quem estuda cripto de verdade — níveis reais baseados em progresso, do Recruta ao JEDI.',
+    description: 'A comunidade iziCripto conecta quem estuda cripto de verdade — níveis reais baseados em progresso, do Explorador ao Guardião.',
     path: '/comunidade',
   });
 
@@ -136,15 +136,16 @@ export function CommunityPage() {
           <p className="text-muted mt-2 max-w-xl mx-auto">Nada de comprar nível ou se autodeclarar — o cálculo é direto: quantas aulas do catálogo você já terminou.</p>
         </div>
         <div className="grid sm:grid-cols-3 gap-5">
-          {LEVELS.map((level, i) => {
+          {LEVELS.map((level) => {
             const isMine = myLevel?.id === level.id;
+            const LevelIcon = level.icon;
             return (
               <Card key={level.id} className={cn('p-6 flex flex-col', isMine && 'border-accent border-2 relative')}>
                 {isMine && (
                   <span className="absolute -top-3 left-6 bg-accent text-ink text-[11px] font-bold px-3 py-1 rounded-full">Seu nível</span>
                 )}
                 <span className="inline-flex h-11 w-11 rounded-xl bg-accent/10 items-center justify-center">
-                  {i === 0 ? <Sparkles size={19} className="text-accent-deep" /> : i === 1 ? <Award size={19} className="text-accent-deep" /> : <BadgeCheck size={19} className="text-accent-deep" />}
+                  <LevelIcon size={19} className="text-accent-deep" />
                 </span>
                 <h3 className="font-bold text-lg mt-4">{level.label}</h3>
                 <div className="text-xs font-[var(--font-mono)] text-muted mt-1">{level.range}</div>
@@ -166,7 +167,7 @@ export function CommunityPage() {
         </div>
         {!user && (
           <div className="text-center mt-10">
-            <Link to="/registrar"><Button size="lg">Criar conta e virar Recruta <ArrowRight size={16} /></Button></Link>
+            <Link to="/registrar"><Button size="lg">Criar conta e virar Explorador <ArrowRight size={16} /></Button></Link>
           </div>
         )}
       </section>

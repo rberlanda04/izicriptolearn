@@ -10,6 +10,7 @@ import { Skeleton } from '../components/ui/Skeleton.jsx';
 import { CourseCover } from '../components/CourseCover.jsx';
 import { cn } from '../lib/utils.js';
 import { useSeo } from '../lib/useSeo.js';
+import bannerImg from '../assets/banner.avif';
 
 // A home pública ('/') é só a página de marketing — quem já tem conta é mandado direto pro
 // painel, em vez de ver de novo a mesma vitrine de "crie uma conta grátis".
@@ -232,6 +233,9 @@ function MarketingHome() {
           </div>
 
           <div className="relative hidden lg:block">
+            <div className="bg-panel-2 border border-white/10 rounded-2xl p-3 -rotate-2 mb-4 mr-6 overflow-hidden">
+              <img src={bannerImg} alt="" className="w-full h-20 object-cover rounded-lg" aria-hidden="true" />
+            </div>
             <div className="bg-panel-2 border border-white/10 rounded-2xl p-6 rotate-2">
               <div className="flex items-center gap-3 mb-4">
                 <span className="h-10 w-10 rounded-full bg-accent/15 flex items-center justify-center"><LineChart size={18} className="text-accent" /></span>

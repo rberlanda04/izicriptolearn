@@ -158,9 +158,9 @@ function recommendedCourseIdFor(profile) {
 // (não em compra de plano nem em auto-declaração). Usado em /api/journey e na página
 // /comunidade do cliente.
 const COMMUNITY_LEVELS = [
-    { id: 'recruta', label: 'Recruta', min: 0 },
-    { id: 'nordico', label: 'Nórdico', min: 10 },
-    { id: 'jedi', label: 'JEDI', min: 30 },
+    { id: 'explorador', label: 'Explorador', min: 0 },
+    { id: 'nativo', label: 'Nativo', min: 10 },
+    { id: 'guardiao', label: 'Guardião', min: 30 },
 ];
 function communityLevelFor(totalCompleted) {
     let current = COMMUNITY_LEVELS[0];
